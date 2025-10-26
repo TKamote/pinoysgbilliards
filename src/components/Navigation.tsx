@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLive } from "@/contexts/LiveContext";
 
 const Navigation = () => {
   const pathname = usePathname();
+  const { isLive } = useLive();
+
+  // Don't render navigation when live
+  if (isLive) {
+    return null;
+  }
 
   const navItems = [
     {
