@@ -145,7 +145,7 @@ const StandbyPage = () => {
         {/* Tournament Title */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            PBS 10-Ball @ Klassic Club
+            WTA Saturday @ Aspire Sports Arena
           </h1>
           <div className="w-24 h-1 bg-blue-600 mx-auto rounded"></div>
         </div>

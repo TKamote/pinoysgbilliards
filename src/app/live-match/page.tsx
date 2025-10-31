@@ -63,6 +63,18 @@ const LiveMatchPage = () => {
           </button>
         </div>
 
+        {/* Logo - Bottom Left Corner */}
+        <div className="absolute" style={{ bottom: "20px", left: "20px" }}>
+          <Image
+            src="/favicon.png"
+            alt="Logo"
+            width={100}
+            height={100}
+            className="opacity-70"
+            unoptimized
+          />
+        </div>
+
         {/* Players Scoring Container - Bottom */}
         <div className="bg-white rounded-lg shadow-lg px-1 py-1 mt-auto w-fit mx-auto">
           <div className="flex items-center justify-between">
