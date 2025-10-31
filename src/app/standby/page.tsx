@@ -140,7 +140,7 @@ const StandbyPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-4xl mx-auto">
         {/* Tournament Title */}
         <div className="text-center mb-12">

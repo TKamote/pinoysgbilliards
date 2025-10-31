@@ -23,6 +23,10 @@ const Navigation = () => {
       href: "/players",
     },
     {
+      name: "Matches",
+      href: "/matches",
+    },
+    {
       name: "Standby",
       href: "/standby",
     },
