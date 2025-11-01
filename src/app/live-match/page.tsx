@@ -363,6 +363,7 @@ const LiveMatchPage = () => {
     { num: 7, color: "bg-pink-500" },
     { num: 8, color: "bg-gray-800" },
     { num: 9, color: "bg-yellow-400" },
+    { num: 10, color: "bg-white border-2 border-gray-400" },
   ];
 
   // Determine if player selection should be enabled
@@ -520,6 +521,7 @@ const LiveMatchPage = () => {
             <div className="flex space-x-4 bg-amber-50 rounded-full px-6 py-1">
               {ballColors.map((ball) => {
                 const isPocketed = pocketedBalls.has(ball.num);
+                const isBall10 = ball.num === 10;
 
                 return (
                   <div
@@ -527,7 +529,9 @@ const LiveMatchPage = () => {
                     onClick={() => !isPocketed && handleBallClick(ball.num)}
                     className={`w-12 h-12 ${
                       ball.color
-                    } rounded-full flex items-center justify-center text-white font-bold transition-all ${
+                    } rounded-full flex items-center justify-center font-bold transition-all ${
+                      isBall10 ? "text-gray-800" : "text-white"
+                    } ${
                       isPocketed
                         ? "opacity-0 cursor-default"
                         : "cursor-pointer hover:scale-110"
