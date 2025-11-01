@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useLive } from "@/contexts/LiveContext";
 
 const LiveMatchPage = () => {
   const [player1Name] = useState("Owen");
   const [player2Name] = useState("Dave");
-  const [player1Score] = useState(0);
-  const [player2Score] = useState(0);
+  const [player1Score, setPlayer1Score] = useState(0);
+  const [player2Score, setPlayer2Score] = useState(0);
+  const [currentTurn, setCurrentTurn] = useState<"player1" | "player2" | null>(
+    null
+  );
   const { isLive, setIsLive } = useLive();
+
+  // Double-press R for reset tracking
+  const lastResetPress = useRef<number>(0);
+  const RESET_TIMEOUT = 500; // 500ms window for double-press
 
   // Profile photo URLs - Replace these with actual photo URLs from player profiles
   const player1Photo =
@@ -33,6 +40,78 @@ const LiveMatchPage = () => {
   const handleResetBalls = () => {
     setPocketedBalls(new Set());
   };
+
+  // Keyboard shortcuts handler
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // Handle Tab key separately (before lowercasing)
+      if (e.key === "Tab") {
+        e.preventDefault();
+        setCurrentTurn((prev) => {
+          if (prev === "player1") return "player2";
+          return "player1"; // Handles both "player2" and null
+        });
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      switch (key) {
+        case "q":
+          // Increment Player 1 score
+          setPlayer1Score((prev) => prev + 1);
+          break;
+
+        case "a":
+          // Decrement Player 1 score (prevent negative)
+          setPlayer1Score((prev) => Math.max(0, prev - 1));
+          break;
+
+        case "e":
+          // Increment Player 2 score
+          setPlayer2Score((prev) => prev + 1);
+          break;
+
+        case "d":
+          // Decrement Player 2 score (prevent negative)
+          setPlayer2Score((prev) => Math.max(0, prev - 1));
+          break;
+
+        case "z":
+          // Z → Reset indicator to no turn
+          e.preventDefault();
+          setCurrentTurn(null);
+          break;
+
+        case "r":
+          // Double-press R to reset scores
+          e.preventDefault();
+          const now = Date.now();
+          if (now - lastResetPress.current < RESET_TIMEOUT) {
+            // Double-press detected - reset scores
+            setPlayer1Score(0);
+            setPlayer2Score(0);
+            setCurrentTurn(null); // Reset turn indicator
+            lastResetPress.current = 0; // Reset counter
+          } else {
+            // First press - record timestamp
+            lastResetPress.current = now;
+          }
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, []);
 
   const ballColors = [
     { num: 1, color: "bg-red-500" },
@@ -71,6 +150,7 @@ const LiveMatchPage = () => {
             width={100}
             height={100}
             className="opacity-70"
+            style={{ borderRadius: "20px" }}
             unoptimized
           />
         </div>
@@ -78,8 +158,14 @@ const LiveMatchPage = () => {
         {/* Players Scoring Container - Bottom */}
         <div className="bg-white rounded-lg shadow-lg px-1 py-1 mt-auto w-fit mx-auto">
           <div className="flex items-center justify-between">
-            {/* Player 1 Profile Photo */}
-            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-blue-500 shrink-0">
+            {/* Player 1 Profile Photo with Turn Indicator */}
+            <div
+              className={`w-14 h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 ${
+                currentTurn === "player1"
+                  ? "border-4 border-gray-600 shadow-xl shadow-gray-600/80 ring-4 ring-gray-600/30"
+                  : "border-2 border-blue-500"
+              }`}
+            >
               <Image
                 src={player1Photo}
                 alt={player1Name}
@@ -121,8 +207,14 @@ const LiveMatchPage = () => {
               </div>
             </div>
 
-            {/* Player 2 Profile Photo */}
-            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-green-500 shrink-0">
+            {/* Player 2 Profile Photo with Turn Indicator */}
+            <div
+              className={`w-14 h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 ${
+                currentTurn === "player2"
+                  ? "border-4 border-gray-600 shadow-xl shadow-gray-600/80 ring-4 ring-gray-600/30"
+                  : "border-2 border-green-500"
+              }`}
+            >
               <Image
                 src={player2Photo}
                 alt={player2Name}
