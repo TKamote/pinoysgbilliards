@@ -372,6 +372,13 @@ const LiveMatchPage = () => {
   return (
     <div className="p-6 h-screen flex flex-col bg-transparent">
       <div className="max-w-7xl mx-auto flex-1 flex flex-col">
+        {/* Championship Title - Top Center */}
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10">
+          <h1 className="text-4xl font-bold text-gray-900 drop-shadow-lg drop-shadow-white/50">
+            Championship
+          </h1>
+        </div>
+
         {/* Live Button - Top Right Corner */}
         <div className="absolute" style={{ top: "80px", right: "50px" }}>
           <button
