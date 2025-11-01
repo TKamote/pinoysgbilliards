@@ -374,7 +374,7 @@ const LiveMatchPage = () => {
       <div className="max-w-7xl mx-auto flex-1 flex flex-col">
         {/* Championship Title - Top Center */}
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10">
-          <h1 className="text-4xl font-bold text-gray-900 drop-shadow-lg drop-shadow-white/50">
+          <h1 className="text-4xl font-bold text-gray-800 bg-white/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-lg shadow-white/50 border border-white/30">
             Championship
           </h1>
         </div>
