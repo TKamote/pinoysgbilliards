@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Players collection
+    match /players/{playerId} {
+      // Anyone can read
+      allow read: if true;
+      // Only authenticated users (managers) can write
+      allow write: if request.auth != null;
+    }
+    
+    // Tournaments collection
+    match /tournaments/{tournamentId} {
+      // Anyone can read
+      allow read: if true;
+      // Only authenticated users (managers) can write
+      allow write: if request.auth != null;
+    }
+    
+    // Current Match collection - for live match state persistence
+    match /current_match/{matchId} {
+      // Anyone can read (to display match info)
+      allow read: if true;
+      // Only authenticated users (managers) can write
+      allow write: if request.auth != null;
+    }
+    
+    // Matches collection - for tournament bracket matches
+    match /matches/{matchId} {
+      // Anyone can read matches
+      allow read: if true;
+      // Only authenticated users (managers) can write
+      allow write: if request.auth != null;
+    }
+  }
+}
+
