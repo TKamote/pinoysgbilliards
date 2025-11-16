@@ -2,18 +2,23 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
+export type GameMode = "9-ball" | "10-ball" | "15-ball";
+
 interface LiveContextType {
   isLive: boolean;
   setIsLive: (isLive: boolean) => void;
+  gameMode: GameMode;
+  setGameMode: (gameMode: GameMode) => void;
 }
 
 const LiveContext = createContext<LiveContextType | undefined>(undefined);
 
 export const LiveProvider = ({ children }: { children: ReactNode }) => {
   const [isLive, setIsLive] = useState(false);
+  const [gameMode, setGameMode] = useState<GameMode>("9-ball");
 
   return (
-    <LiveContext.Provider value={{ isLive, setIsLive }}>
+    <LiveContext.Provider value={{ isLive, setIsLive, gameMode, setGameMode }}>
       {children}
     </LiveContext.Provider>
   );

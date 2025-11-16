@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLive } from "@/contexts/LiveContext";
+import { useLive, GameMode } from "@/contexts/LiveContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 
 const Navigation = () => {
   const pathname = usePathname();
-  const { isLive } = useLive();
+  const { isLive, gameMode, setGameMode } = useLive();
+  const { isManager } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Don't render navigation when live
@@ -70,53 +72,101 @@ const Navigation = () => {
             </div>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="sm:hidden flex items-center">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-              aria-expanded="false"
-            >
-              <span className="sr-only">Open main menu</span>
-              {/* Hamburger icon */}
-              <svg
-                className={`${isMobileMenuOpen ? "hidden" : "block"} h-6 w-6`}
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
+          {/* Game Mode Selector - Placed on the right */}
+          <div className="flex items-center">
+            {isManager && pathname === "/live-match" && (
+              <div className="hidden sm:flex items-center space-x-2 mr-4">
+                <label
+                  htmlFor="gameMode"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Game Mode:
+                </label>
+                <select
+                  id="gameMode"
+                  value={gameMode}
+                  onChange={(e) => setGameMode(e.target.value as GameMode)}
+                  className="rounded-md border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="9-ball">9-ball</option>
+                  <option value="10-ball">10-ball</option>
+                  <option value="15-ball">15-ball</option>
+                </select>
+              </div>
+            )}
+
+            {/* Mobile menu button */}
+            <div className="sm:hidden flex items-center">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                aria-expanded="false"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-              {/* Close icon */}
-              <svg
-                className={`${isMobileMenuOpen ? "block" : "hidden"} h-6 w-6`}
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+                <span className="sr-only">Open main menu</span>
+                {/* Hamburger icon */}
+                <svg
+                  className={`${isMobileMenuOpen ? "hidden" : "block"} h-6 w-6`}
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+                {/* Close icon */}
+                <svg
+                  className={`${isMobileMenuOpen ? "block" : "hidden"} h-6 w-6`}
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Mobile Navigation Menu */}
         <div className={`${isMobileMenuOpen ? "block" : "hidden"} sm:hidden`}>
           <div className="pt-2 pb-3 space-y-1">
+            {/* Game Mode Selector in Mobile Menu */}
+            {isManager && pathname === "/live-match" && (
+              <div className="px-4 py-2">
+                <label
+                  htmlFor="mobileGameMode"
+                  className="block text-base font-medium text-gray-700 mb-1"
+                >
+                  Game Mode
+                </label>
+                <select
+                  id="mobileGameMode"
+                  value={gameMode}
+                  onChange={(e) => {
+                    setGameMode(e.target.value as GameMode);
+                    setIsMobileMenuOpen(false); // Close menu on selection
+                  }}
+                  className="w-full rounded-md border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="9-ball">9-ball</option>
+                  <option value="10-ball">10-ball</option>
+                  <option value="15-ball">15-ball</option>
+                </select>
+              </div>
+            )}
             {navItems.map((item) => {
               const isActive = pathname === item.href;
 

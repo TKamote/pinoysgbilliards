@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { useLive } from "@/contexts/LiveContext";
+import { useLive, GameMode } from "@/contexts/LiveContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -27,7 +27,7 @@ const LiveMatchPage = () => {
   const [showPlayer1Modal, setShowPlayer1Modal] = useState(false);
   const [showPlayer2Modal, setShowPlayer2Modal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { isLive, setIsLive } = useLive();
+  const { isLive, setIsLive, gameMode, setGameMode } = useLive();
   const { isManager } = useAuth();
 
   // Double-press R for reset tracking
@@ -53,6 +53,47 @@ const LiveMatchPage = () => {
     if (player2?.name) return player2.name;
     return "Dave";
   };
+
+  // Get placeholder avatar based on player (consistent per player)
+  const getPlayer1Placeholder = () => {
+    if (player1?.id) {
+      // Use hash of player ID to consistently pick a placeholder
+      const hash = player1.id
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const placeholderNum = (hash % 6) + 1;
+      return `/avatar-placeholder-${placeholderNum}.svg`;
+    }
+    return "/avatar-placeholder-1.svg";
+  };
+
+  const getPlayer2Placeholder = () => {
+    if (player2?.id) {
+      // Use hash of player ID to consistently pick a placeholder
+      const hash = player2.id
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const placeholderNum = (hash % 6) + 1;
+      return `/avatar-placeholder-${placeholderNum}.svg`;
+    }
+    return "/avatar-placeholder-yellow.svg";
+  };
+
+  // Determine ball numbers based on game mode
+  const getBallNumbers = (mode: GameMode): number[] => {
+    switch (mode) {
+      case "9-ball":
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9];
+      case "10-ball":
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      case "15-ball":
+        return []; // 15-ball shows nothing
+      default:
+        return [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    }
+  };
+
+  const ballNumbers = getBallNumbers(gameMode);
 
   // Track which balls are pocketed (removed)
   const [pocketedBalls, setPocketedBalls] = useState<Set<number>>(new Set());
@@ -153,6 +194,22 @@ const LiveMatchPage = () => {
           if (matchData.player2Score !== undefined) {
             setPlayer2Score(matchData.player2Score);
           }
+
+          // Restore pocketed balls
+          if (
+            matchData.pocketedBalls &&
+            Array.isArray(matchData.pocketedBalls)
+          ) {
+            setPocketedBalls(new Set(matchData.pocketedBalls));
+          }
+
+          // Restore game mode
+          if (
+            matchData.gameMode &&
+            ["9-ball", "10-ball", "15-ball"].includes(matchData.gameMode)
+          ) {
+            setGameMode(matchData.gameMode as GameMode);
+          }
         }
       } catch (error) {
         console.error("Error loading match data:", error);
@@ -195,6 +252,9 @@ const LiveMatchPage = () => {
 
   // Save match data to Firestore (scores and turn)
   const saveMatchData = async () => {
+    if (!isManager) {
+      return;
+    }
     try {
       const matchDocRef = doc(db, "current_match", "live");
       await setDoc(
@@ -209,17 +269,21 @@ const LiveMatchPage = () => {
           player1Score,
           player2Score,
           currentTurn,
+          pocketedBalls: Array.from(pocketedBalls),
+          gameMode,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
       );
     } catch (error) {
       console.error("Error saving match data:", error);
+      // Silently fail if not authenticated
     }
   };
 
   // Handle player selection
   const handlePlayer1Select = async (selectedPlayer: Player) => {
+    if (!isManager) return;
     setPlayer1(selectedPlayer);
     // Save to Firestore with all player data
     try {
@@ -240,6 +304,7 @@ const LiveMatchPage = () => {
   };
 
   const handlePlayer2Select = async (selectedPlayer: Player) => {
+    if (!isManager) return;
     setPlayer2(selectedPlayer);
     // Save to Firestore with all player data
     try {
@@ -265,13 +330,17 @@ const LiveMatchPage = () => {
       saveMatchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player1Score, player2Score, currentTurn, loading, player1, player2]);
+  }, [player1Score, player2Score, currentTurn, loading, player1, player2, pocketedBalls, gameMode]);
 
-  // Handle ball click - removes/pockets the ball
+  // Handle ball click - toggles pocketed state
   const handleBallClick = (ballNumber: number) => {
     setPocketedBalls((prev) => {
       const newSet = new Set(prev);
-      newSet.add(ballNumber);
+      if (newSet.has(ballNumber)) {
+        newSet.delete(ballNumber);
+      } else {
+        newSet.add(ballNumber);
+      }
       return newSet;
     });
   };
@@ -304,6 +373,32 @@ const LiveMatchPage = () => {
 
       const key = e.key.toLowerCase();
 
+      // Handle Delete key for resetting balls
+      if (e.key === "Delete" || e.key === "Del") {
+        e.preventDefault();
+        handleResetBalls();
+        return;
+      }
+
+      // Handle number keys 0-9 for ball toggling
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        const ballNumber = e.key === "0" ? 10 : parseInt(e.key);
+        // Toggle the ball's pocketed state only if it's in the current game
+        if (ballNumbers.includes(ballNumber)) {
+          setPocketedBalls((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(ballNumber)) {
+              newSet.delete(ballNumber);
+            } else {
+              newSet.add(ballNumber);
+            }
+            return newSet;
+          });
+        }
+        return;
+      }
+
       switch (key) {
         case "q":
           // Increment Player 1 score
@@ -326,9 +421,21 @@ const LiveMatchPage = () => {
           break;
 
         case "z":
-          // Z → Reset indicator to no turn
+          // Z → Left arrow (player1's turn)
+          e.preventDefault();
+          setCurrentTurn("player1");
+          break;
+
+        case "x":
+          // X → No arrow (no turn)
           e.preventDefault();
           setCurrentTurn(null);
+          break;
+
+        case "c":
+          // C → Right arrow (player2's turn)
+          e.preventDefault();
+          setCurrentTurn("player2");
           break;
 
         case "r":
@@ -353,32 +460,12 @@ const LiveMatchPage = () => {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, []);
 
-  const ballColors = [
-    { num: 1, color: "bg-red-500" },
-    { num: 2, color: "bg-yellow-500" },
-    { num: 3, color: "bg-blue-500" },
-    { num: 4, color: "bg-purple-500" },
-    { num: 5, color: "bg-orange-500" },
-    { num: 6, color: "bg-green-500" },
-    { num: 7, color: "bg-pink-500" },
-    { num: 8, color: "bg-gray-800" },
-    { num: 9, color: "bg-yellow-400" },
-    { num: 10, color: "bg-white border-2 border-gray-400" },
-  ];
-
   // Determine if player selection should be enabled
   const canSelectPlayers = isManager && !isLive;
 
   return (
     <div className="p-6 h-screen flex flex-col bg-transparent">
       <div className="max-w-7xl mx-auto flex-1 flex flex-col">
-        {/* Championship Title - Top Center */}
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10">
-          <h1 className="text-4xl font-bold text-gray-800 bg-white/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-lg shadow-white/50 border border-white/30">
-            Championship
-          </h1>
-        </div>
-
         {/* Live Button - Top Right Corner */}
         <div className="absolute" style={{ top: "80px", right: "50px" }}>
           <button
@@ -400,7 +487,7 @@ const LiveMatchPage = () => {
             alt="Logo"
             width={100}
             height={100}
-            className="opacity-70"
+            className="opacity-90"
             style={{ borderRadius: "20px" }}
             unoptimized
           />
@@ -437,7 +524,13 @@ const LiveMatchPage = () => {
                   unoptimized
                 />
               ) : (
-                <span className="text-3xl">👤</span>
+                <Image
+                  src={getPlayer1Placeholder()}
+                  alt={getPlayer1Name()}
+                  width={56}
+                  height={56}
+                  className="w-full h-full object-cover"
+                />
               )}
             </button>
 
@@ -516,39 +609,46 @@ const LiveMatchPage = () => {
                   unoptimized
                 />
               ) : (
-                <span className="text-3xl">👤</span>
+                <Image
+                  src={getPlayer2Placeholder()}
+                  alt={getPlayer2Name()}
+                  width={56}
+                  height={56}
+                  className="w-full h-full object-cover"
+                />
               )}
             </button>
           </div>
         </div>
 
-        {/* Billiards Ball Icons */}
+        {/* Billiards Ball Icons & Game Mode Selector */}
         <div className="mt-4 flex flex-col items-center">
           <div className="flex items-center space-x-4">
             <div className="flex space-x-4 bg-amber-50 rounded-full px-6 py-1">
-              {ballColors.map((ball) => {
-                const isPocketed = pocketedBalls.has(ball.num);
-                const isBall10 = ball.num === 10;
-
+              {ballNumbers.map((ballNum) => {
+                const isPocketed = pocketedBalls.has(ballNum);
                 return (
                   <div
-                    key={ball.num}
-                    onClick={() => !isPocketed && handleBallClick(ball.num)}
-                    className={`w-12 h-12 ${
-                      ball.color
-                    } rounded-full flex items-center justify-center font-bold transition-all ${
-                      isBall10 ? "text-gray-800" : "text-white"
-                    } ${
+                    key={ballNum}
+                    onClick={() => handleBallClick(ballNum)}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all relative ${
                       isPocketed
-                        ? "opacity-0 cursor-default"
+                        ? "opacity-20 cursor-default"
                         : "cursor-pointer hover:scale-110"
                     }`}
-                    style={{ fontSize: "22px" }}
                     title={
-                      isPocketed ? "Ball pocketed" : "Click to pocket ball"
+                      isPocketed
+                        ? "Ball pocketed"
+                        : "Click to pocket/unpocket ball"
                     }
                   >
-                    {ball.num}
+                    <Image
+                      src={`/ballicons/ball-${ballNum}.png`}
+                      alt={`Ball ${ballNum}`}
+                      width={48}
+                      height={48}
+                      className="object-contain"
+                    />
                   </div>
                 );
               })}
