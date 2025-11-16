@@ -9,6 +9,10 @@ interface LiveContextType {
   setIsLive: (isLive: boolean) => void;
   gameMode: GameMode;
   setGameMode: (gameMode: GameMode) => void;
+  pbsLiveIsLive: boolean;
+  setPbsLiveIsLive: (isLive: boolean) => void;
+  pbsGameMode: GameMode;
+  setPbsGameMode: (gameMode: GameMode) => void;
 }
 
 const LiveContext = createContext<LiveContextType | undefined>(undefined);
@@ -16,9 +20,22 @@ const LiveContext = createContext<LiveContextType | undefined>(undefined);
 export const LiveProvider = ({ children }: { children: ReactNode }) => {
   const [isLive, setIsLive] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>("9-ball");
+  const [pbsLiveIsLive, setPbsLiveIsLive] = useState(false);
+  const [pbsGameMode, setPbsGameMode] = useState<GameMode>("9-ball");
 
   return (
-    <LiveContext.Provider value={{ isLive, setIsLive, gameMode, setGameMode }}>
+    <LiveContext.Provider
+      value={{
+        isLive,
+        setIsLive,
+        gameMode,
+        setGameMode,
+        pbsLiveIsLive,
+        setPbsLiveIsLive,
+        pbsGameMode,
+        setPbsGameMode,
+      }}
+    >
       {children}
     </LiveContext.Provider>
   );

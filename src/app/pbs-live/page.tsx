@@ -15,7 +15,7 @@ interface Player {
   points: number;
 }
 
-const LiveMatchPage = () => {
+const PbsLivePage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [player1, setPlayer1] = useState<Player | null>(null);
   const [player2, setPlayer2] = useState<Player | null>(null);
@@ -27,7 +27,8 @@ const LiveMatchPage = () => {
   const [showPlayer1Modal, setShowPlayer1Modal] = useState(false);
   const [showPlayer2Modal, setShowPlayer2Modal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { isLive, setIsLive, gameMode, setGameMode } = useLive();
+  const { pbsLiveIsLive, setPbsLiveIsLive, pbsGameMode, setPbsGameMode } =
+    useLive();
   const { isManager } = useAuth();
 
   // Double-press R for reset tracking
@@ -93,9 +94,9 @@ const LiveMatchPage = () => {
     }
   };
 
-  const ballNumbers = getBallNumbers(gameMode);
+  const ballNumbers = getBallNumbers(pbsGameMode);
 
-  // Track which balls are pocketed (removed)
+  // Track which balls are pocketed
   const [pocketedBalls, setPocketedBalls] = useState<Set<number>>(new Set());
 
   // Fetch players from Firestore
@@ -129,7 +130,7 @@ const LiveMatchPage = () => {
   useEffect(() => {
     const loadMatchData = async () => {
       try {
-        const matchDocRef = doc(db, "current_match", "live");
+        const matchDocRef = doc(db, "current_match", "pbs-live");
         const matchDoc = await getDoc(matchDocRef);
 
         if (matchDoc.exists()) {
@@ -208,7 +209,12 @@ const LiveMatchPage = () => {
             matchData.gameMode &&
             ["9-ball", "10-ball", "15-ball"].includes(matchData.gameMode)
           ) {
-            setGameMode(matchData.gameMode as GameMode);
+            setPbsGameMode(matchData.gameMode as GameMode);
+          }
+
+          // Restore live status
+          if (matchData.isLive !== undefined) {
+            setPbsLiveIsLive(matchData.isLive);
           }
         }
       } catch (error) {
@@ -220,7 +226,7 @@ const LiveMatchPage = () => {
 
     // Load match data (will use saved photoURLs if players not loaded yet)
     loadMatchData();
-  }, [players]);
+  }, [players, setPbsGameMode, setPbsLiveIsLive]);
 
   // Update player objects when players array loads (to get fresh data including updated photos)
   useEffect(() => {
@@ -256,7 +262,7 @@ const LiveMatchPage = () => {
       return;
     }
     try {
-      const matchDocRef = doc(db, "current_match", "live");
+      const matchDocRef = doc(db, "current_match", "pbs-live");
       await setDoc(
         matchDocRef,
         {
@@ -270,7 +276,8 @@ const LiveMatchPage = () => {
           player2Score,
           currentTurn,
           pocketedBalls: Array.from(pocketedBalls),
-          gameMode,
+          gameMode: pbsGameMode,
+          isLive: pbsLiveIsLive,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -287,7 +294,7 @@ const LiveMatchPage = () => {
     setPlayer1(selectedPlayer);
     // Save to Firestore with all player data
     try {
-      const matchDocRef = doc(db, "current_match", "live");
+      const matchDocRef = doc(db, "current_match", "pbs-live");
       await setDoc(
         matchDocRef,
         {
@@ -308,7 +315,7 @@ const LiveMatchPage = () => {
     setPlayer2(selectedPlayer);
     // Save to Firestore with all player data
     try {
-      const matchDocRef = doc(db, "current_match", "live");
+      const matchDocRef = doc(db, "current_match", "pbs-live");
       await setDoc(
         matchDocRef,
         {
@@ -330,7 +337,17 @@ const LiveMatchPage = () => {
       saveMatchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player1Score, player2Score, currentTurn, loading, player1, player2, pocketedBalls, gameMode]);
+  }, [
+    player1Score,
+    player2Score,
+    currentTurn,
+    loading,
+    player1,
+    player2,
+    pocketedBalls,
+    pbsGameMode,
+    pbsLiveIsLive,
+  ]);
 
   // Handle ball click - toggles pocketed state
   const handleBallClick = (ballNumber: number) => {
@@ -339,7 +356,7 @@ const LiveMatchPage = () => {
       if (newSet.has(ballNumber)) {
         newSet.delete(ballNumber);
       } else {
-      newSet.add(ballNumber);
+        newSet.add(ballNumber);
       }
       return newSet;
     });
@@ -380,10 +397,10 @@ const LiveMatchPage = () => {
         return;
       }
 
-      // Handle number keys 0-9 for ball toggling
-      if (e.key >= "0" && e.key <= "9") {
+      // Handle number keys 1-9 for ball toggling (PBS Live uses 1-9, not 0-9)
+      if (e.key >= "1" && e.key <= "9") {
         e.preventDefault();
-        const ballNumber = e.key === "0" ? 10 : parseInt(e.key);
+        const ballNumber = parseInt(e.key);
         // Toggle the ball's pocketed state only if it's in the current game
         if (ballNumbers.includes(ballNumber)) {
           setPocketedBalls((prev) => {
@@ -458,10 +475,10 @@ const LiveMatchPage = () => {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, []);
+  }, [ballNumbers]);
 
   // Determine if player selection should be enabled
-  const canSelectPlayers = isManager && !isLive;
+  const canSelectPlayers = isManager && !pbsLiveIsLive;
 
   return (
     <div className="p-6 h-screen flex flex-col bg-transparent">
@@ -469,26 +486,49 @@ const LiveMatchPage = () => {
         {/* Live Button - Top Right Corner */}
         <div className="absolute" style={{ top: "80px", right: "50px" }}>
           <button
-            onClick={() => setIsLive(!isLive)}
+            onClick={() => setPbsLiveIsLive(!pbsLiveIsLive)}
             className={`text-white px-4 py-2 rounded-full font-bold text-lg transition-all duration-300 ${
-              isLive
+              pbsLiveIsLive
                 ? "bg-linear-to-r from-red-600 to-red-800 animate-pulse"
                 : "bg-gray-500 hover:bg-gray-600"
             }`}
           >
-            {isLive ? "LIVE" : "GO LIVE"}
+            {pbsLiveIsLive ? "LIVE" : "GO LIVE"}
           </button>
         </div>
 
-        {/* Logo - Bottom Left Corner */}
-        <div className="absolute" style={{ bottom: "20px", left: "20px" }}>
+        {/* Logos - Top Left Corner, Stacked Vertically */}
+        <div
+          className="absolute flex flex-col"
+          style={{ top: "80px", left: "20px" }}
+        >
           <Image
-            src="/favicon.png"
-            alt="Logo"
-            width={100}
-            height={100}
+            src="/PBS.png"
+            alt="PBS Logo"
+            width={150}
+            height={0}
             className="opacity-90"
-            style={{ borderRadius: "20px" }}
+            style={{ width: "150px", height: "auto" }}
+            unoptimized
+          />
+          <div style={{ height: "10px" }} />
+          <Image
+            src="/Owen.png"
+            alt="Owen Logo"
+            width={150}
+            height={0}
+            className="opacity-90"
+            style={{ width: "150px", height: "auto" }}
+            unoptimized
+          />
+          <div style={{ height: "10px" }} />
+          <Image
+            src="/Asa.png"
+            alt="Asa Logo"
+            width={150}
+            height={0}
+            className="opacity-90"
+            style={{ width: "150px", height: "auto" }}
             unoptimized
           />
         </div>
@@ -701,4 +741,5 @@ const LiveMatchPage = () => {
   );
 };
 
-export default LiveMatchPage;
+export default PbsLivePage;
+
