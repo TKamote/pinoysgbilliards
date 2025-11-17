@@ -507,28 +507,28 @@ const PbsLivePage = () => {
             alt="PBS Logo"
             width={150}
             height={0}
-            className="opacity-90"
-            style={{ width: "150px", height: "auto" }}
+            className="bg-white"
+            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
             unoptimized
           />
-          <div style={{ height: "10px" }} />
+          <div style={{ height: "20px" }} />
           <Image
             src="/Owen.png"
             alt="Owen Logo"
             width={150}
             height={0}
-            className="opacity-90"
-            style={{ width: "150px", height: "auto" }}
+            className="bg-white"
+            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
             unoptimized
           />
-          <div style={{ height: "10px" }} />
+          <div style={{ height: "20px" }} />
           <Image
             src="/Asa.png"
             alt="Asa Logo"
             width={150}
             height={0}
-            className="opacity-90"
-            style={{ width: "150px", height: "auto" }}
+            className="bg-white"
+            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
             unoptimized
           />
         </div>
