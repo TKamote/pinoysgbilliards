@@ -572,7 +572,7 @@ const LiveMatchPage = () => {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
-      <div className="max-w-7xl mx-auto flex-1 flex flex-col relative w-full">
+      <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
         {/* Live Button - Top Right Corner */}
         <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">
           <button
