@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useLive, GameMode } from "@/contexts/LiveContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
+import WinnerModal from "@/components/WinnerModal";
 
 interface Player {
   id: string;
@@ -27,6 +28,11 @@ const PbsLivePage = () => {
   const [showPlayer1Modal, setShowPlayer1Modal] = useState(false);
   const [showPlayer2Modal, setShowPlayer2Modal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [raceTo, setRaceTo] = useState(7); // Default race to 7
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
+  const [winner, setWinner] = useState<Player | null>(null);
+  const [showRaceToInput, setShowRaceToInput] = useState(false);
+  const [tempRaceTo, setTempRaceTo] = useState("7");
   const { pbsLiveIsLive, setPbsLiveIsLive, pbsGameMode, setPbsGameMode } =
     useLive();
   const { isManager } = useAuth();
@@ -94,7 +100,15 @@ const PbsLivePage = () => {
     }
   };
 
-  const ballNumbers = getBallNumbers(pbsGameMode);
+  const ballNumbers = useMemo(() => {
+    const mode = pbsGameMode || "9-ball";
+    const balls = getBallNumbers(mode);
+    // Debug: log to ensure balls are calculated
+    if (balls.length === 0 && mode !== "15-ball") {
+      console.log("Warning: ballNumbers is empty for mode:", mode);
+    }
+    return balls;
+  }, [pbsGameMode]);
 
   // Track which balls are pocketed
   const [pocketedBalls, setPocketedBalls] = useState<Set<number>>(new Set());
@@ -212,9 +226,10 @@ const PbsLivePage = () => {
             setPbsGameMode(matchData.gameMode as GameMode);
           }
 
-          // Restore live status
-          if (matchData.isLive !== undefined) {
-            setPbsLiveIsLive(matchData.isLive);
+          // Restore raceTo
+          if (matchData.raceTo !== undefined && typeof matchData.raceTo === "number") {
+            setRaceTo(matchData.raceTo);
+            setTempRaceTo(matchData.raceTo.toString());
           }
         }
       } catch (error) {
@@ -226,7 +241,7 @@ const PbsLivePage = () => {
 
     // Load match data (will use saved photoURLs if players not loaded yet)
     loadMatchData();
-  }, [players, setPbsGameMode, setPbsLiveIsLive]);
+  }, [players, setPbsGameMode]);
 
   // Update player objects when players array loads (to get fresh data including updated photos)
   useEffect(() => {
@@ -277,7 +292,7 @@ const PbsLivePage = () => {
           currentTurn,
           pocketedBalls: Array.from(pocketedBalls),
           gameMode: pbsGameMode,
-          isLive: pbsLiveIsLive,
+          raceTo,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -331,23 +346,27 @@ const PbsLivePage = () => {
     }
   };
 
+  // Winner detection - check if any player reached raceTo
+  useEffect(() => {
+    if (loading || showWinnerModal) return; // Don't trigger if modal already showing
+
+    if (player1Score >= raceTo && player1) {
+      setWinner(player1);
+      setShowWinnerModal(true);
+    } else if (player2Score >= raceTo && player2) {
+      setWinner(player2);
+      setShowWinnerModal(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player1Score, player2Score, raceTo, player1?.id, player2?.id, loading, showWinnerModal]);
+
   // Save scores when they change
   useEffect(() => {
     if (!loading) {
       saveMatchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    player1Score,
-    player2Score,
-    currentTurn,
-    loading,
-    player1,
-    player2,
-    pocketedBalls,
-    pbsGameMode,
-    pbsLiveIsLive,
-  ]);
+  }, [player1Score, player2Score, currentTurn, loading, player1, player2, pocketedBalls, pbsGameMode, raceTo]);
 
   // Handle ball click - toggles pocketed state
   const handleBallClick = (ballNumber: number) => {
@@ -363,9 +382,30 @@ const PbsLivePage = () => {
   };
 
   // Reset all balls for a new game
-  const handleResetBalls = () => {
+  const handleResetBalls = useCallback(() => {
     setPocketedBalls(new Set());
+  }, []);
+
+  // Handle raceTo change
+  const handleRaceToChange = () => {
+    const newRaceTo = parseInt(tempRaceTo);
+    if (!isNaN(newRaceTo) && newRaceTo > 0 && newRaceTo <= 50) {
+      setRaceTo(newRaceTo);
+      setShowRaceToInput(false);
+      // Save to Firestore
+      saveMatchData();
+    }
   };
+
+  // Handle winner modal close - reset scores
+  const handleWinnerModalClose = useCallback(() => {
+    setShowWinnerModal(false);
+    setWinner(null);
+    setPlayer1Score(0);
+    setPlayer2Score(0);
+    setCurrentTurn(null);
+    setPocketedBalls(new Set());
+  }, []);
 
   // Keyboard shortcuts handler
   useEffect(() => {
@@ -375,6 +415,28 @@ const PbsLivePage = () => {
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
       ) {
+        return;
+      }
+
+      // Handle Delete key FIRST (before other key checks)
+      // Check multiple ways to detect Delete key
+      const isDeleteKey = 
+        e.key === "Delete" || 
+        e.key === "Del" || 
+        e.keyCode === 46 || 
+        e.which === 46 ||
+        (e.key === "Backspace" && !(e.target instanceof HTMLInputElement));
+
+      if (isDeleteKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        // If winner modal is showing, reset the entire match
+        if (showWinnerModal) {
+          handleWinnerModalClose();
+        } else {
+          // Otherwise just reset balls (same as the reset button)
+          handleResetBalls();
+        }
         return;
       }
 
@@ -390,19 +452,56 @@ const PbsLivePage = () => {
 
       const key = e.key.toLowerCase();
 
-      // Handle Delete key for resetting balls
-      if (e.key === "Delete" || e.key === "Del") {
+      // Handle - (minus) key for decrementing raceTo
+      if (e.key === "-" || e.key === "_") {
         e.preventDefault();
-        handleResetBalls();
+        setRaceTo((prev) => {
+          const newValue = Math.max(1, prev - 1);
+          // Save immediately to Firestore
+          if (isManager && !loading) {
+            const matchDocRef = doc(db, "current_match", "pbs-live");
+            setDoc(
+              matchDocRef,
+              { raceTo: newValue, updatedAt: new Date().toISOString() },
+              { merge: true }
+            ).catch((error) => {
+              console.error("Error saving raceTo:", error);
+            });
+          }
+          return newValue;
+        });
         return;
       }
 
-      // Handle number keys 1-9 for ball toggling (PBS Live uses 1-9, not 0-9)
-      if (e.key >= "1" && e.key <= "9") {
+      // Handle + (plus) key for incrementing raceTo
+      if (e.key === "+" || e.key === "=") {
         e.preventDefault();
-        const ballNumber = parseInt(e.key);
+        setRaceTo((prev) => {
+          const newValue = Math.min(50, prev + 1);
+          // Save immediately to Firestore
+          if (isManager && !loading) {
+            const matchDocRef = doc(db, "current_match", "pbs-live");
+            setDoc(
+              matchDocRef,
+              { raceTo: newValue, updatedAt: new Date().toISOString() },
+              { merge: true }
+            ).catch((error) => {
+              console.error("Error saving raceTo:", error);
+            });
+          }
+          return newValue;
+        });
+        return;
+      }
+
+      // Handle number keys 0-9 for ball toggling
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        const ballNumber = e.key === "0" ? 10 : parseInt(e.key);
+        // Get ball numbers based on current game mode
+        const currentBallNumbers = getBallNumbers(pbsGameMode);
         // Toggle the ball's pocketed state only if it's in the current game
-        if (ballNumbers.includes(ballNumber)) {
+        if (currentBallNumbers.includes(ballNumber)) {
           setPocketedBalls((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(ballNumber)) {
@@ -475,19 +574,19 @@ const PbsLivePage = () => {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [ballNumbers]);
+  }, [isManager, pbsLiveIsLive, pbsGameMode, handleResetBalls, loading, showWinnerModal, handleWinnerModalClose]);
 
   // Determine if player selection should be enabled
   const canSelectPlayers = isManager && !pbsLiveIsLive;
 
   return (
-    <div className="p-6 h-screen flex flex-col bg-transparent">
-      <div className="max-w-7xl mx-auto flex-1 flex flex-col">
+    <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
+      <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
         {/* Live Button - Top Right Corner */}
-        <div className="absolute" style={{ top: "80px", right: "50px" }}>
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">
           <button
             onClick={() => setPbsLiveIsLive(!pbsLiveIsLive)}
-            className={`text-white px-4 py-2 rounded-full font-bold text-lg transition-all duration-300 ${
+            className={`text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 ${
               pbsLiveIsLive
                 ? "bg-linear-to-r from-red-600 to-red-800 animate-pulse"
                 : "bg-gray-500 hover:bg-gray-600"
@@ -499,8 +598,8 @@ const PbsLivePage = () => {
 
         {/* Logos - Top Left Corner, Stacked Vertically */}
         <div
-          className="absolute flex flex-col"
-          style={{ top: "80px", left: "20px" }}
+          className="absolute flex flex-col z-10 items-start"
+          style={{ top: "80px", left: "30px" }}
         >
           <Image
             src="/PBS.png"
@@ -534,24 +633,24 @@ const PbsLivePage = () => {
         </div>
 
         {/* Players Scoring Container - Bottom */}
-        <div className="bg-white rounded-lg shadow-lg px-1 py-1 mt-auto w-fit mx-auto">
-          <div className="flex items-center justify-between">
-            {/* Player 1 Profile Photo with Turn Indicator */}
+        <div className="mt-auto w-full max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
+          {/* Player 1 Section - Red Background */}
+          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16">
+            {/* Player 1 Profile Photo */}
             <button
-              onClick={() => canSelectPlayers && setShowPlayer1Modal(true)}
-              disabled={!canSelectPlayers}
-              className={`w-14 h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center ${
-                currentTurn === "player1"
-                  ? "border-4 border-gray-600 shadow-xl shadow-gray-600/80 ring-4 ring-gray-600/30"
-                  : "border-2 border-blue-500"
-              } ${
+              onClick={() => {
+                if (canSelectPlayers) {
+                  setShowPlayer1Modal(true);
+                }
+              }}
+              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
               } ${
                 getPlayer1Photo()
                   ? "bg-transparent"
-                  : "bg-linear-to-br from-blue-400 to-blue-600"
+                  : "bg-red-600"
               }`}
             >
               {getPlayer1Photo() ? (
@@ -574,69 +673,130 @@ const PbsLivePage = () => {
               )}
             </button>
 
-            {/* Center Content */}
-            <div className="flex items-center justify-center space-x-2 flex-1">
-              {/* Player 1 Name */}
-              <button
-                onClick={() => canSelectPlayers && setShowPlayer1Modal(true)}
-                disabled={!canSelectPlayers}
-                className={`bg-red-500 px-28 py-3 ${
-                  canSelectPlayers
-                    ? "cursor-pointer hover:bg-red-600"
-                    : "cursor-default"
-                } transition-colors`}
-              >
-                <div className="text-2xl font-bold text-white">
-                  {getPlayer1Name()}
-                </div>
-              </button>
-
-              {/* Scores and VS */}
-              <div
-                className="flex items-center justify-center space-x-5 bg-linear-to-r from-red-600 to-blue-600"
-                style={{ width: "calc(2rem + 8rem + 2rem)", height: "3.5rem" }}
-              >
-                <div className="text-5xl font-bold text-white">
-                  {player1Score}
-                </div>
-                <div className="text-1.5xl font-bold text-white">VS</div>
-                <div className="text-5xl font-bold text-white">
-                  {player2Score}
-                </div>
+            {/* Player 1 Name */}
+            <button
+              onClick={() => {
+                if (canSelectPlayers) {
+                  setShowPlayer1Modal(true);
+                }
+              }}
+              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
+                canSelectPlayers
+                  ? "cursor-pointer hover:bg-red-800"
+                  : "cursor-default"
+              } transition-colors`}
+            >
+              <div className="text-xs sm:text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+                {getPlayer1Name()}
               </div>
+            </button>
 
-              {/* Player 2 Name */}
+            {/* Turn Indicator for Player 1 - Enhanced Chevron with Glow */}
+            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all ${
+              currentTurn === "player1" 
+                ? "opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
+                : "opacity-0"
+            }`} style={{ lineHeight: 1 }}>
+              <span style={{ display: 'block', marginTop: '-0.1em' }}>‹</span>
+            </div>
+          </div>
+
+          {/* Scores and Race To - Gradient Center */}
+          <div
+            className="flex items-center justify-center space-x-2 sm:space-x-3 md:space-x-4 lg:space-x-5 bg-linear-to-r from-red-700 to-blue-700 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4"
+          >
+            <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+              {player1Score}
+            </div>
+            {showRaceToInput && isManager ? (
+              <div className="flex items-center space-x-1">
+                <input
+                  type="number"
+                  value={tempRaceTo}
+                  onChange={(e) => setTempRaceTo(e.target.value)}
+                  onBlur={handleRaceToChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleRaceToChange();
+                    } else if (e.key === "Escape") {
+                      setShowRaceToInput(false);
+                      setTempRaceTo(raceTo.toString());
+                    }
+                  }}
+                  className="w-10 sm:w-12 md:w-14 lg:w-16 text-center text-xs sm:text-sm md:text-base lg:text-xl font-bold text-white bg-transparent border-2 border-white rounded px-1 sm:px-2"
+                  min="1"
+                  max="50"
+                  autoFocus
+                />
+              </div>
+            ) : (
               <button
-                onClick={() => canSelectPlayers && setShowPlayer2Modal(true)}
-                disabled={!canSelectPlayers}
-                className={`bg-blue-600 px-28 py-3 ${
-                  canSelectPlayers
-                    ? "cursor-pointer hover:bg-blue-700"
+                onClick={() => {
+                  if (isManager) {
+                    setShowRaceToInput(true);
+                    setTempRaceTo(raceTo.toString());
+                  }
+                }}
+                className={`text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl font-bold text-white ${
+                  isManager
+                    ? "cursor-pointer hover:opacity-80 underline"
                     : "cursor-default"
-                } transition-colors`}
+                }`}
+                disabled={!isManager}
+                title={isManager ? "Click to edit" : ""}
               >
-                <div className="text-2xl font-bold text-white">
-                  {getPlayer2Name()}
-                </div>
+                Race {raceTo}
               </button>
+            )}
+            <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+              {player2Score}
+            </div>
+          </div>
+
+          {/* Player 2 Section - Blue Background */}
+          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16">
+            {/* Turn Indicator for Player 2 - Enhanced Chevron with Glow */}
+            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all ${
+              currentTurn === "player2" 
+                ? "opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
+                : "opacity-0"
+            }`} style={{ lineHeight: 1 }}>
+              <span style={{ display: 'block', marginTop: '-0.1em' }}>›</span>
             </div>
 
-            {/* Player 2 Profile Photo with Turn Indicator */}
+            {/* Player 2 Name */}
             <button
-              onClick={() => canSelectPlayers && setShowPlayer2Modal(true)}
-              disabled={!canSelectPlayers}
-              className={`w-14 h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center ${
-                currentTurn === "player2"
-                  ? "border-4 border-gray-600 shadow-xl shadow-gray-600/80 ring-4 ring-gray-600/30"
-                  : "border-2 border-green-500"
-              } ${
+              onClick={() => {
+                if (canSelectPlayers) {
+                  setShowPlayer2Modal(true);
+                }
+              }}
+              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
+                canSelectPlayers
+                  ? "cursor-pointer hover:bg-blue-800"
+                  : "cursor-default"
+              } transition-colors`}
+            >
+              <div className="text-xs sm:text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+                {getPlayer2Name()}
+              </div>
+            </button>
+
+            {/* Player 2 Profile Photo */}
+            <button
+              onClick={() => {
+                if (canSelectPlayers) {
+                  setShowPlayer2Modal(true);
+                }
+              }}
+              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
               } ${
                 getPlayer2Photo()
                   ? "bg-transparent"
-                  : "bg-linear-to-br from-green-400 to-green-600"
+                  : "bg-blue-600"
               }`}
             >
               {getPlayer2Photo() ? (
@@ -662,36 +822,41 @@ const PbsLivePage = () => {
         </div>
 
         {/* Billiards Ball Icons & Game Mode Selector */}
-        <div className="mt-4 flex flex-col items-center">
-          <div className="flex items-center space-x-4">
-            <div className="flex space-x-4 bg-amber-50 rounded-full px-6 py-1">
-              {ballNumbers.map((ballNum) => {
-                const isPocketed = pocketedBalls.has(ballNum);
-                return (
-                  <div
-                    key={ballNum}
-                    onClick={() => handleBallClick(ballNum)}
-                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all relative ${
-                      isPocketed
-                        ? "opacity-20 cursor-default"
-                        : "cursor-pointer hover:scale-110"
-                    }`}
-                    title={
-                      isPocketed
-                        ? "Ball pocketed"
-                        : "Click to pocket/unpocket ball"
-                    }
-                  >
-                    <Image
-                      src={`/ballicons/ball-${ballNum}.png`}
-                      alt={`Ball ${ballNum}`}
-                      width={48}
-                      height={48}
-                      className="object-contain"
-                    />
-                  </div>
-                );
-              })}
+        <div className="mt-2 sm:mt-3 md:mt-4 flex flex-col items-center px-2 pb-4">
+          <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-wrap justify-center">
+            <div className="flex space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4 bg-amber-50 rounded-full px-2 sm:px-4 md:px-6 py-1 flex-wrap justify-center">
+              {ballNumbers.length > 0 ? (
+                ballNumbers.map((ballNum) => {
+                  const isPocketed = pocketedBalls.has(ballNum);
+                  return (
+                    <div
+                      key={ballNum}
+                      onClick={() => handleBallClick(ballNum)}
+                      className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold transition-all relative ${
+                        isPocketed
+                          ? "opacity-20 cursor-default"
+                          : "cursor-pointer hover:scale-110"
+                      }`}
+                      title={
+                        isPocketed
+                          ? "Ball pocketed"
+                          : "Click to pocket/unpocket ball"
+                      }
+                    >
+                      <Image
+                        src={`/ballicons/ball-${ballNum}.png`}
+                        alt={`Ball ${ballNum}`}
+                        width={48}
+                        height={48}
+                        className="object-contain w-full h-full"
+                        unoptimized
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-xs text-gray-500 px-2">No balls for {pbsGameMode || "current"} mode</div>
+              )}
             </div>
 
             {/* Reset Icon Button - Subtle, outside background */}
@@ -702,7 +867,7 @@ const PbsLivePage = () => {
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-4 w-4 sm:h-5 sm:w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -736,10 +901,27 @@ const PbsLivePage = () => {
           onSelect={handlePlayer2Select}
           title="Select Player 2"
         />
+
+        {/* Winner Modal */}
+        <WinnerModal
+          isOpen={showWinnerModal}
+          onClose={handleWinnerModalClose}
+          winner={winner}
+          getPlayerPlaceholder={(playerId: string) => {
+            const hash = playerId
+              .split("")
+              .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const placeholderNum = (hash % 6) + 1;
+            return `/avatar-placeholder-${placeholderNum}.svg`;
+          }}
+          player1Score={player1Score}
+          player2Score={player2Score}
+          player1Name={getPlayer1Name()}
+          player2Name={getPlayer2Name()}
+        />
       </div>
     </div>
   );
 };
 
 export default PbsLivePage;
-
