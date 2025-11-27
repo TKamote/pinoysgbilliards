@@ -33,6 +33,8 @@ const LiveMatchPage = () => {
   const [winner, setWinner] = useState<Player | null>(null);
   const [showRaceToInput, setShowRaceToInput] = useState(false);
   const [tempRaceTo, setTempRaceTo] = useState("7");
+  const [team1Score, setTeam1Score] = useState(0);
+  const [team2Score, setTeam2Score] = useState(0);
   const { isLive, setIsLive, gameMode, setGameMode } = useLive();
   const { isManager } = useAuth();
 
@@ -587,15 +589,108 @@ const LiveMatchPage = () => {
           </button>
         </div>
 
+        {/* Team Scores Panel - Left Side */}
+        <div className="absolute z-10 flex flex-col items-start space-y-3" style={{ top: "280px", left: "30px" }}>
+          {/* Race To */}
+          <div className="bg-gray-800 bg-opacity-80 px-4 py-2 text-white flex items-center space-x-2" style={{ minWidth: "140px" }}>
+            <div className="text-lg sm:text-xl font-bold text-gray-300">Race to</div>
+            <div className="text-lg sm:text-xl font-bold">5</div>
+          </div>
+
+          {/* Team 1 */}
+          <div className="bg-red-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-3" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
+            <div className="flex items-center space-x-2">
+              <div className="font-bold" style={{ fontSize: "22px" }}>Team 1</div>
+              <div className="flex flex-col space-y-1">
+                <button
+                  onClick={() => setTeam1Score(prev => prev + 1)}
+                  className="text-black hover:opacity-80 transition-opacity opacity-60"
+                  title="Increment Team 1 Score"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 sm:h-5 sm:w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setTeam1Score(prev => Math.max(0, prev - 1))}
+                  className="text-black hover:opacity-80 transition-opacity opacity-60"
+                  title="Decrement Team 1 Score"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 sm:h-5 sm:w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="font-bold" style={{ fontSize: "24px", color: "#FFD700" }}>{team1Score}</div>
+          </div>
+
+          {/* Team 2 */}
+          <div className="bg-blue-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-3" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
+            <div className="flex items-center space-x-2">
+              <div className="font-bold" style={{ fontSize: "22px" }}>Team 2</div>
+              <div className="flex flex-col space-y-1">
+                <button
+                  onClick={() => setTeam2Score(prev => prev + 1)}
+                  className="text-black hover:opacity-80 transition-opacity opacity-60"
+                  title="Increment Team 2 Score"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 sm:h-5 sm:w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setTeam2Score(prev => Math.max(0, prev - 1))}
+                  className="text-black hover:opacity-80 transition-opacity opacity-60"
+                  title="Decrement Team 2 Score"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 sm:h-5 sm:w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="font-bold" style={{ fontSize: "24px", color: "#FFD700" }}>{team2Score}</div>
+          </div>
+        </div>
+
         {/* Logo - Top Left Corner */}
         <div className="absolute z-10" style={{ top: "100px", left: "30px" }}>
           <Image
-            src="/favicon.png"
-            alt="Logo"
-            width={100}
-            height={100}
-            className="w-[72px] h-[72px] sm:w-24 sm:h-24 md:w-[120px] md:h-[120px] lg:w-36 lg:h-36 xl:w-[168px] xl:h-[168px] opacity-100"
-            style={{ borderRadius: "20px", opacity: 1 }}
+            src="/Owen.png"
+            alt="Owen Logo"
+            width={150}
+            height={0}
+            className="bg-white"
+            style={{ width: "150px", height: "auto", borderRadius: "20%" }}
             unoptimized
           />
         </div>
