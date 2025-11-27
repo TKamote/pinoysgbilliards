@@ -18,12 +18,15 @@ const Navigation = () => {
     pbsTourIsLive,
     pbsTourGameMode,
     setPbsTourGameMode,
+    threePlayersIsLive,
+    threePlayersGameMode,
+    setThreePlayersGameMode,
   } = useLive();
   const { isManager } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Don't render navigation when live
-  if (isLive || pbsLiveIsLive || pbsTourIsLive) {
+  if (isLive || pbsLiveIsLive || pbsTourIsLive || threePlayersIsLive) {
     return null;
   }
 
@@ -51,6 +54,10 @@ const Navigation = () => {
     {
       name: "PBS Tour",
       href: "/pbs-tour",
+    },
+    {
+      name: "3 Players",
+      href: "/3-players",
     },
   ];
 
@@ -143,6 +150,28 @@ const Navigation = () => {
                   value={pbsTourGameMode}
                   onChange={(e) =>
                     setPbsTourGameMode(e.target.value as GameMode)
+                  }
+                  className="rounded-md border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="9-ball">9-ball</option>
+                  <option value="10-ball">10-ball</option>
+                  <option value="15-ball">15-ball</option>
+                </select>
+              </div>
+            )}
+            {isManager && pathname === "/3-players" && (
+              <div className="hidden sm:flex items-center space-x-2 mr-4">
+                <label
+                  htmlFor="threePlayersGameMode"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Game Mode:
+                </label>
+                <select
+                  id="threePlayersGameMode"
+                  value={threePlayersGameMode}
+                  onChange={(e) =>
+                    setThreePlayersGameMode(e.target.value as GameMode)
                   }
                   className="rounded-md border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -261,6 +290,29 @@ const Navigation = () => {
                   value={pbsTourGameMode}
                   onChange={(e) => {
                     setPbsTourGameMode(e.target.value as GameMode);
+                    setIsMobileMenuOpen(false); // Close menu on selection
+                  }}
+                  className="w-full rounded-md border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="9-ball">9-ball</option>
+                  <option value="10-ball">10-ball</option>
+                  <option value="15-ball">15-ball</option>
+                </select>
+              </div>
+            )}
+            {isManager && pathname === "/3-players" && (
+              <div className="px-4 py-2">
+                <label
+                  htmlFor="mobileThreePlayersGameMode"
+                  className="block text-base font-medium text-gray-700 mb-1"
+                >
+                  Game Mode
+                </label>
+                <select
+                  id="mobileThreePlayersGameMode"
+                  value={threePlayersGameMode}
+                  onChange={(e) => {
+                    setThreePlayersGameMode(e.target.value as GameMode);
                     setIsMobileMenuOpen(false); // Close menu on selection
                   }}
                   className="w-full rounded-md border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500"
