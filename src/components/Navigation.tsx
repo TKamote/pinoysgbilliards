@@ -56,8 +56,12 @@ const Navigation = () => {
       href: "/pbs-tour",
     },
     {
-      name: "3 Players",
+      name: "Ring Game",
       href: "/3-players",
+    },
+    {
+      name: "Ring",
+      href: "/ring",
     },
   ];
 
