@@ -698,7 +698,7 @@ const LiveMatchPage = () => {
         {/* Players Scoring Container - Bottom */}
         <div className="mt-auto w-full max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
           {/* Player 1 Section - Red Background */}
-          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16">
+          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16 flex-1 justify-end">
             {/* Player 1 Profile Photo */}
             <button
               onClick={() => {
@@ -743,7 +743,7 @@ const LiveMatchPage = () => {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
+              className={`px-4 h-full flex items-center ${
                 canSelectPlayers
                   ? "cursor-pointer hover:bg-red-800"
                   : "cursor-default"
@@ -815,7 +815,7 @@ const LiveMatchPage = () => {
           </div>
 
           {/* Player 2 Section - Blue Background */}
-          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16">
+          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16 flex-1">
             {/* Chevron Right Indicator for Player 2 Turn */}
             <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-opacity ${
               currentTurn === "player2" ? "opacity-100" : "opacity-0"
@@ -830,7 +830,7 @@ const LiveMatchPage = () => {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
+              className={`px-4 h-full flex items-center ${
                 canSelectPlayers
                   ? "cursor-pointer hover:bg-blue-800"
                   : "cursor-default"
