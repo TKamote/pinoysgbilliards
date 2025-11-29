@@ -17,6 +17,10 @@ interface LiveContextType {
   setPbsTourIsLive: (isLive: boolean) => void;
   pbsTourGameMode: GameMode;
   setPbsTourGameMode: (gameMode: GameMode) => void;
+  pbsTour2IsLive: boolean;
+  setPbsTour2IsLive: (isLive: boolean) => void;
+  pbsTour2GameMode: GameMode;
+  setPbsTour2GameMode: (gameMode: GameMode) => void;
   threePlayersIsLive: boolean;
   setThreePlayersIsLive: (isLive: boolean) => void;
   threePlayersGameMode: GameMode;
@@ -32,6 +36,8 @@ export const LiveProvider = ({ children }: { children: ReactNode }) => {
   const [pbsGameMode, setPbsGameMode] = useState<GameMode>("9-ball");
   const [pbsTourIsLive, setPbsTourIsLive] = useState(false);
   const [pbsTourGameMode, setPbsTourGameMode] = useState<GameMode>("9-ball");
+  const [pbsTour2IsLive, setPbsTour2IsLive] = useState(false);
+  const [pbsTour2GameMode, setPbsTour2GameMode] = useState<GameMode>("9-ball");
   const [threePlayersIsLive, setThreePlayersIsLive] = useState(false);
   const [threePlayersGameMode, setThreePlayersGameMode] = useState<GameMode>("9-ball");
 
@@ -50,6 +56,10 @@ export const LiveProvider = ({ children }: { children: ReactNode }) => {
         setPbsTourIsLive,
         pbsTourGameMode,
         setPbsTourGameMode,
+        pbsTour2IsLive,
+        setPbsTour2IsLive,
+        pbsTour2GameMode,
+        setPbsTour2GameMode,
         threePlayersIsLive,
         setThreePlayersIsLive,
         threePlayersGameMode,

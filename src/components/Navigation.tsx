@@ -18,6 +18,9 @@ const Navigation = () => {
     pbsTourIsLive,
     pbsTourGameMode,
     setPbsTourGameMode,
+    pbsTour2IsLive,
+    pbsTour2GameMode,
+    setPbsTour2GameMode,
     threePlayersIsLive,
     threePlayersGameMode,
     setThreePlayersGameMode,
@@ -26,7 +29,7 @@ const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Don't render navigation when live
-  if (isLive || pbsLiveIsLive || pbsTourIsLive || threePlayersIsLive) {
+  if (isLive || pbsLiveIsLive || pbsTourIsLive || pbsTour2IsLive || threePlayersIsLive) {
     return null;
   }
 
@@ -54,6 +57,10 @@ const Navigation = () => {
     {
       name: "PBS Tour",
       href: "/pbs-tour",
+    },
+    {
+      name: "PBS Tour 2",
+      href: "/pbs-tour-2",
     },
     {
       name: "3 Players",
@@ -150,6 +157,28 @@ const Navigation = () => {
                   value={pbsTourGameMode}
                   onChange={(e) =>
                     setPbsTourGameMode(e.target.value as GameMode)
+                  }
+                  className="rounded-md border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="9-ball">9-ball</option>
+                  <option value="10-ball">10-ball</option>
+                  <option value="15-ball">15-ball</option>
+                </select>
+              </div>
+            )}
+            {isManager && pathname === "/pbs-tour-2" && (
+              <div className="hidden sm:flex items-center space-x-2 mr-4">
+                <label
+                  htmlFor="pbsTour2GameMode"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Game Mode:
+                </label>
+                <select
+                  id="pbsTour2GameMode"
+                  value={pbsTour2GameMode}
+                  onChange={(e) =>
+                    setPbsTour2GameMode(e.target.value as GameMode)
                   }
                   className="rounded-md border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -290,6 +319,29 @@ const Navigation = () => {
                   value={pbsTourGameMode}
                   onChange={(e) => {
                     setPbsTourGameMode(e.target.value as GameMode);
+                    setIsMobileMenuOpen(false); // Close menu on selection
+                  }}
+                  className="w-full rounded-md border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="9-ball">9-ball</option>
+                  <option value="10-ball">10-ball</option>
+                  <option value="15-ball">15-ball</option>
+                </select>
+              </div>
+            )}
+            {isManager && pathname === "/pbs-tour-2" && (
+              <div className="px-4 py-2">
+                <label
+                  htmlFor="mobilePbsTour2GameMode"
+                  className="block text-base font-medium text-gray-700 mb-1"
+                >
+                  Game Mode
+                </label>
+                <select
+                  id="mobilePbsTour2GameMode"
+                  value={pbsTour2GameMode}
+                  onChange={(e) => {
+                    setPbsTour2GameMode(e.target.value as GameMode);
                     setIsMobileMenuOpen(false); // Close menu on selection
                   }}
                   className="w-full rounded-md border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500"
