@@ -66,6 +66,10 @@ const Navigation = () => {
       name: "3 Players",
       href: "/3-players",
     },
+    {
+      name: "Ring",
+      href: "/ring",
+    },
   ];
 
   return (
