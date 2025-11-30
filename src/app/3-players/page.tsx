@@ -632,6 +632,18 @@ const ThreePlayersPage = () => {
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
       <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
+        {/* Logo - Top Left Corner */}
+        <div className="absolute top-4 left-4 z-10">
+          <Image
+            src="/PSGB_LogoSQ.jpg"
+            alt="PSGB Logo"
+            width={150}
+            height={150}
+            className="rounded-lg"
+            unoptimized
+          />
+        </div>
+
         {/* Live Button - Top Right Corner */}
         <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">
           <button
