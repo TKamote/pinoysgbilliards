@@ -635,11 +635,12 @@ const ThreePlayersPage = () => {
         {/* Logo - Top Left Corner */}
         <div className="absolute top-4 left-4 z-10">
           <Image
-            src="/PSGB_LogoSQ.jpg"
+            src="/PSGB_Logo.png"
             alt="PSGB Logo"
             width={150}
             height={150}
-            className="rounded-lg"
+            className="rounded-full"
+            style={{ borderRadius: "50%" }}
             unoptimized
           />
         </div>
