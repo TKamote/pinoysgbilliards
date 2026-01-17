@@ -666,7 +666,7 @@ const PbsTour2Page = () => {
                   : "cursor-default"
               } transition-colors`}
             >
-              <div className="text-xs sm:text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
                 {getPlayer1Name()}
               </div>
             </button>
@@ -685,7 +685,7 @@ const PbsTour2Page = () => {
           <div
             className="flex items-center justify-center space-x-2 sm:space-x-3 md:space-x-4 lg:space-x-5 bg-linear-to-r from-red-900 to-blue-900 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4"
           >
-            <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white">
               {player1Score}
             </div>
             {showRaceToInput && isManager ? (
@@ -728,7 +728,7 @@ const PbsTour2Page = () => {
                 Race {raceTo}
               </button>
             )}
-            <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white">
               {player2Score}
             </div>
           </div>
@@ -757,7 +757,7 @@ const PbsTour2Page = () => {
                   : "cursor-default"
               } transition-colors`}
             >
-              <div className="text-xs sm:text-sm md:text-lg lg:text-xl xl:text-2xl font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
                 {getPlayer2Name()}
               </div>
             </button>

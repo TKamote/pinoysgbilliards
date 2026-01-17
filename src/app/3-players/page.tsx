@@ -763,7 +763,7 @@ const ThreePlayersPage = () => {
                   : "cursor-default"
               } transition-colors`}
             >
-              <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold text-white truncate w-full">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate w-full">
                 {getPlayer1Name()}
               </div>
             </button>
@@ -779,7 +779,7 @@ const ThreePlayersPage = () => {
 
             {/* Player 1 Score */}
             <div className="px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 h-full flex items-center justify-center shrink-0">
-              <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-white whitespace-nowrap">
+              <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white whitespace-nowrap">
                 {player1Score}
               </div>
             </div>
@@ -837,7 +837,7 @@ const ThreePlayersPage = () => {
                   : "cursor-default"
               } transition-colors`}
             >
-              <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold text-white truncate w-full">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate w-full">
                 {getPlayer2Name()}
               </div>
             </button>
@@ -853,7 +853,7 @@ const ThreePlayersPage = () => {
 
             {/* Player 2 Score */}
             <div className="px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 h-full flex items-center justify-center shrink-0">
-              <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-white whitespace-nowrap">
+              <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white whitespace-nowrap">
                 {player2Score}
               </div>
             </div>
@@ -911,7 +911,7 @@ const ThreePlayersPage = () => {
                   : "cursor-default"
               } transition-colors`}
             >
-              <div className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold text-white truncate w-full">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate w-full">
                 {getPlayer3Name()}
               </div>
             </button>
@@ -927,7 +927,7 @@ const ThreePlayersPage = () => {
 
             {/* Player 3 Score */}
             <div className="px-2 sm:px-3 md:px-4 lg:px-5 xl:px-6 h-full flex items-center justify-center shrink-0">
-              <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-white whitespace-nowrap">
+              <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white whitespace-nowrap">
                 {player3Score}
               </div>
             </div>
