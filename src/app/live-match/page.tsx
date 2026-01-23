@@ -27,6 +27,10 @@ const LiveMatchPage = () => {
   );
   const [showPlayer1Modal, setShowPlayer1Modal] = useState(false);
   const [showPlayer2Modal, setShowPlayer2Modal] = useState(false);
+  const [team1, setTeam1] = useState<Player | null>(null);
+  const [team2, setTeam2] = useState<Player | null>(null);
+  const [showTeam1Modal, setShowTeam1Modal] = useState(false);
+  const [showTeam2Modal, setShowTeam2Modal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [raceTo, setRaceTo] = useState(7); // Default race to 7
   const [showWinnerModal, setShowWinnerModal] = useState(false);
@@ -79,6 +83,49 @@ const LiveMatchPage = () => {
     if (player2?.id) {
       // Use hash of player ID to consistently pick a placeholder
       const hash = player2.id
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const placeholderNum = (hash % 6) + 1;
+      return `/avatar-placeholder-${placeholderNum}.svg`;
+    }
+    return "/avatar-placeholder-yellow.svg";
+  };
+
+  // Get team photo URL (returns null if no photo)
+  const getTeam1Photo = () => {
+    return team1?.photoURL || null;
+  };
+
+  const getTeam2Photo = () => {
+    return team2?.photoURL || null;
+  };
+
+  // Get team name or default
+  const getTeam1Name = () => {
+    if (team1?.name) return team1.name;
+    return "Team 1";
+  };
+
+  const getTeam2Name = () => {
+    if (team2?.name) return team2.name;
+    return "Team 2";
+  };
+
+  // Get placeholder avatar based on team (consistent per team)
+  const getTeam1Placeholder = () => {
+    if (team1?.id) {
+      const hash = team1.id
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const placeholderNum = (hash % 6) + 1;
+      return `/avatar-placeholder-${placeholderNum}.svg`;
+    }
+    return "/avatar-placeholder-1.svg";
+  };
+
+  const getTeam2Placeholder = () => {
+    if (team2?.id) {
+      const hash = team2.id
         .split("")
         .reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const placeholderNum = (hash % 6) + 1;
@@ -224,6 +271,62 @@ const LiveMatchPage = () => {
             setRaceTo(matchData.raceTo);
             setTempRaceTo(matchData.raceTo.toString());
           }
+
+          // Restore team 1 - try to find in players array first, otherwise use saved data
+          if (matchData.team1Id) {
+            if (players.length > 0) {
+              const t1 = players.find((p) => p.id === matchData.team1Id);
+              if (t1) {
+                setTeam1(t1);
+              } else if (matchData.team1Name) {
+                setTeam1({
+                  id: matchData.team1Id,
+                  name: matchData.team1Name,
+                  photoURL: matchData.team1PhotoURL || "",
+                  points: 0,
+                });
+              }
+            } else if (matchData.team1Name) {
+              setTeam1({
+                id: matchData.team1Id,
+                name: matchData.team1Name,
+                photoURL: matchData.team1PhotoURL || "",
+                points: 0,
+              });
+            }
+          }
+
+          // Restore team 2 - try to find in players array first, otherwise use saved data
+          if (matchData.team2Id) {
+            if (players.length > 0) {
+              const t2 = players.find((p) => p.id === matchData.team2Id);
+              if (t2) {
+                setTeam2(t2);
+              } else if (matchData.team2Name) {
+                setTeam2({
+                  id: matchData.team2Id,
+                  name: matchData.team2Name,
+                  photoURL: matchData.team2PhotoURL || "",
+                  points: 0,
+                });
+              }
+            } else if (matchData.team2Name) {
+              setTeam2({
+                id: matchData.team2Id,
+                name: matchData.team2Name,
+                photoURL: matchData.team2PhotoURL || "",
+                points: 0,
+              });
+            }
+          }
+
+          // Restore team scores
+          if (matchData.team1Score !== undefined) {
+            setTeam1Score(matchData.team1Score);
+          }
+          if (matchData.team2Score !== undefined) {
+            setTeam2Score(matchData.team2Score);
+          }
         }
       } catch (error) {
         console.error("Error loading match data:", error);
@@ -238,7 +341,7 @@ const LiveMatchPage = () => {
 
   // Update player objects when players array loads (to get fresh data including updated photos)
   useEffect(() => {
-    if (players.length > 0 && (player1?.id || player2?.id)) {
+    if (players.length > 0 && (player1?.id || player2?.id || team1?.id || team2?.id)) {
       // Update player 1 with fresh data from players array if it exists
       if (player1?.id) {
         const freshP1 = players.find((p) => p.id === player1.id);
@@ -257,6 +360,26 @@ const LiveMatchPage = () => {
           // Only update if photoURL changed or if current photoURL is empty
           if (!player2.photoURL || freshP2.photoURL !== player2.photoURL) {
             setPlayer2(freshP2);
+          }
+        }
+      }
+
+      // Update team 1 with fresh data from players array if it exists
+      if (team1?.id) {
+        const freshT1 = players.find((p) => p.id === team1.id);
+        if (freshT1) {
+          if (!team1.photoURL || freshT1.photoURL !== team1.photoURL) {
+            setTeam1(freshT1);
+          }
+        }
+      }
+
+      // Update team 2 with fresh data from players array if it exists
+      if (team2?.id) {
+        const freshT2 = players.find((p) => p.id === team2.id);
+        if (freshT2) {
+          if (!team2.photoURL || freshT2.photoURL !== team2.photoURL) {
+            setTeam2(freshT2);
           }
         }
       }
@@ -282,6 +405,14 @@ const LiveMatchPage = () => {
           player2PhotoURL: player2?.photoURL || "",
           player1Score,
           player2Score,
+          team1Id: team1?.id || null,
+          team2Id: team2?.id || null,
+          team1Name: team1?.name || "Team 1",
+          team2Name: team2?.name || "Team 2",
+          team1PhotoURL: team1?.photoURL || "",
+          team2PhotoURL: team2?.photoURL || "",
+          team1Score,
+          team2Score,
           currentTurn,
           pocketedBalls: Array.from(pocketedBalls),
           gameMode,
@@ -339,6 +470,49 @@ const LiveMatchPage = () => {
     }
   };
 
+  // Handle team selection
+  const handleTeam1Select = async (selectedTeam: Player) => {
+    if (!isManager) return;
+    setTeam1(selectedTeam);
+    // Save to Firestore with all team data
+    try {
+      const matchDocRef = doc(db, "current_match", "live");
+      await setDoc(
+        matchDocRef,
+        {
+          team1Id: selectedTeam.id,
+          team1Name: selectedTeam.name,
+          team1PhotoURL: selectedTeam.photoURL || "",
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving team 1:", error);
+    }
+  };
+
+  const handleTeam2Select = async (selectedTeam: Player) => {
+    if (!isManager) return;
+    setTeam2(selectedTeam);
+    // Save to Firestore with all team data
+    try {
+      const matchDocRef = doc(db, "current_match", "live");
+      await setDoc(
+        matchDocRef,
+        {
+          team2Id: selectedTeam.id,
+          team2Name: selectedTeam.name,
+          team2PhotoURL: selectedTeam.photoURL || "",
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Error saving team 2:", error);
+    }
+  };
+
   // Winner detection - check if any player reached raceTo
   useEffect(() => {
     if (loading || showWinnerModal) return; // Don't trigger if modal already showing
@@ -359,7 +533,7 @@ const LiveMatchPage = () => {
       saveMatchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player1Score, player2Score, currentTurn, loading, player1, player2, pocketedBalls, gameMode, raceTo]);
+  }, [player1Score, player2Score, team1Score, team2Score, currentTurn, loading, player1, player2, team1, team2, pocketedBalls, gameMode, raceTo]);
 
   // Handle ball click - toggles pocketed state
   const handleBallClick = (ballNumber: number) => {
@@ -598,10 +772,65 @@ const LiveMatchPage = () => {
           </div>
 
           {/* Team 1 */}
-          <div className="bg-red-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-3" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
-            <div className="flex items-center space-x-2">
-              <div className="font-bold" style={{ fontSize: "22px" }}>Team 1</div>
-              <div className="flex flex-col space-y-1">
+          <div className="bg-red-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-2" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              {/* Team 1 Photo */}
+              <button
+                onClick={() => {
+                  if (canSelectPlayers) {
+                    setShowTeam1Modal(true);
+                  }
+                }}
+                className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center border-2 border-white ${
+                  canSelectPlayers
+                    ? "cursor-pointer hover:opacity-80"
+                    : "cursor-default"
+                } ${
+                  getTeam1Photo()
+                    ? "bg-transparent"
+                    : "bg-red-600"
+                }`}
+              >
+                {getTeam1Photo() ? (
+                  <Image
+                    src={getTeam1Photo()!}
+                    alt={getTeam1Name()}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <Image
+                    src={getTeam1Placeholder()}
+                    alt={getTeam1Name()}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </button>
+
+              {/* Team 1 Name */}
+              <button
+                onClick={() => {
+                  if (canSelectPlayers) {
+                    setShowTeam1Modal(true);
+                  }
+                }}
+                className={`flex items-center flex-1 min-w-0 ${
+                  canSelectPlayers
+                    ? "cursor-pointer hover:opacity-80"
+                    : "cursor-default"
+                } transition-opacity`}
+              >
+                <div className="font-bold text-sm sm:text-base md:text-lg truncate" style={{ fontSize: "22px" }}>
+                  {getTeam1Name()}
+                </div>
+              </button>
+
+              {/* Score Buttons */}
+              <div className="flex flex-col space-y-1 shrink-0">
                 <button
                   onClick={() => setTeam1Score(prev => prev + 1)}
                   className="text-black hover:opacity-80 transition-opacity opacity-60"
@@ -636,14 +865,69 @@ const LiveMatchPage = () => {
                 </button>
               </div>
             </div>
-            <div className="font-bold" style={{ fontSize: "24px", color: "#FFD700" }}>{team1Score}</div>
+            <div className="font-bold shrink-0" style={{ fontSize: "24px", color: "#FFD700" }}>{team1Score}</div>
           </div>
 
           {/* Team 2 */}
-          <div className="bg-blue-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-3" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
-            <div className="flex items-center space-x-2">
-              <div className="font-bold" style={{ fontSize: "22px" }}>Team 2</div>
-              <div className="flex flex-col space-y-1">
+          <div className="bg-blue-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-2" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
+            <div className="flex items-center space-x-2 flex-1 min-w-0">
+              {/* Team 2 Photo */}
+              <button
+                onClick={() => {
+                  if (canSelectPlayers) {
+                    setShowTeam2Modal(true);
+                  }
+                }}
+                className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center border-2 border-white ${
+                  canSelectPlayers
+                    ? "cursor-pointer hover:opacity-80"
+                    : "cursor-default"
+                } ${
+                  getTeam2Photo()
+                    ? "bg-transparent"
+                    : "bg-blue-600"
+                }`}
+              >
+                {getTeam2Photo() ? (
+                  <Image
+                    src={getTeam2Photo()!}
+                    alt={getTeam2Name()}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <Image
+                    src={getTeam2Placeholder()}
+                    alt={getTeam2Name()}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </button>
+
+              {/* Team 2 Name */}
+              <button
+                onClick={() => {
+                  if (canSelectPlayers) {
+                    setShowTeam2Modal(true);
+                  }
+                }}
+                className={`flex items-center flex-1 min-w-0 ${
+                  canSelectPlayers
+                    ? "cursor-pointer hover:opacity-80"
+                    : "cursor-default"
+                } transition-opacity`}
+              >
+                <div className="font-bold text-sm sm:text-base md:text-lg truncate" style={{ fontSize: "22px" }}>
+                  {getTeam2Name()}
+                </div>
+              </button>
+
+              {/* Score Buttons */}
+              <div className="flex flex-col space-y-1 shrink-0">
                 <button
                   onClick={() => setTeam2Score(prev => prev + 1)}
                   className="text-black hover:opacity-80 transition-opacity opacity-60"
@@ -678,7 +962,7 @@ const LiveMatchPage = () => {
                 </button>
               </div>
             </div>
-            <div className="font-bold" style={{ fontSize: "24px", color: "#FFD700" }}>{team2Score}</div>
+            <div className="font-bold shrink-0" style={{ fontSize: "24px", color: "#FFD700" }}>{team2Score}</div>
           </div>
         </div>
 
@@ -954,6 +1238,25 @@ const LiveMatchPage = () => {
           selectedPlayerId={player2?.id || null}
           onSelect={handlePlayer2Select}
           title="Select Player 2"
+        />
+
+        {/* Team Selection Modals */}
+        <PlayerSelectionModal
+          isOpen={showTeam1Modal}
+          onClose={() => setShowTeam1Modal(false)}
+          players={players}
+          selectedPlayerId={team1?.id || null}
+          onSelect={handleTeam1Select}
+          title="Select Team 1"
+        />
+
+        <PlayerSelectionModal
+          isOpen={showTeam2Modal}
+          onClose={() => setShowTeam2Modal(false)}
+          players={players}
+          selectedPlayerId={team2?.id || null}
+          onSelect={handleTeam2Select}
+          title="Select Team 2"
         />
 
         {/* Winner Modal */}
