@@ -772,7 +772,7 @@ const LiveMatchPage = () => {
           </div>
 
           {/* Team 1 */}
-          <div className="bg-red-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-2" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
+          <div className="bg-red-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-2" style={{ minWidth: "220px", paddingTop: "2px", paddingBottom: "2px" }}>
             <div className="flex items-center space-x-2 flex-1 min-w-0">
               {/* Team 1 Photo */}
               <button
@@ -869,7 +869,7 @@ const LiveMatchPage = () => {
           </div>
 
           {/* Team 2 */}
-          <div className="bg-blue-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-2" style={{ minWidth: "140px", paddingTop: "2px", paddingBottom: "2px" }}>
+          <div className="bg-blue-700 bg-opacity-90 px-2 text-white flex items-center justify-between space-x-2" style={{ minWidth: "220px", paddingTop: "2px", paddingBottom: "2px" }}>
             <div className="flex items-center space-x-2 flex-1 min-w-0">
               {/* Team 2 Photo */}
               <button
