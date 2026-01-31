@@ -614,8 +614,8 @@ const PbsTour2Page = () => {
 
         {/* Players Scoring Container - Bottom */}
         <div className="mt-auto w-full max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
-          {/* Player 1 Section - Dark Red Background */}
-          <div className="bg-red-900 flex items-center h-12 sm:h-14 md:h-16">
+          {/* Player 1 Section - Dark Indigo: Photo | Name | Score */}
+          <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0">
             {/* Player 1 Profile Photo */}
             <button
               onClick={() => {
@@ -630,7 +630,7 @@ const PbsTour2Page = () => {
               } ${
                 getPlayer1Photo()
                   ? "bg-transparent"
-                  : "bg-red-800"
+                  : "bg-indigo-800"
               }`}
             >
               {getPlayer1Photo() ? (
@@ -653,26 +653,31 @@ const PbsTour2Page = () => {
               )}
             </button>
 
-            {/* Player 1 Name */}
+            {/* Player 1 Name - centered */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
+              className={`flex-1 min-w-0 h-full flex items-center justify-center ${
                 canSelectPlayers
-                  ? "cursor-pointer hover:bg-red-950"
+                  ? "cursor-pointer hover:bg-indigo-800"
                   : "cursor-default"
-              } transition-colors`}
+              } transition-colors px-2`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
                 {getPlayer1Name()}
               </div>
             </button>
 
+            {/* Player 1 Score */}
+            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2">
+              {player1Score}
+            </div>
+
             {/* Turn Indicator for Player 1 - Enhanced Chevron with Glow */}
-            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all ${
+            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all shrink-0 ${
               currentTurn === "player1" 
                 ? "opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
                 : "opacity-0"
@@ -681,13 +686,10 @@ const PbsTour2Page = () => {
             </div>
           </div>
 
-          {/* Scores and Race To - Gradient Center */}
+          {/* Race To - Center (gradient indigo) */}
           <div
-            className="flex items-center justify-center space-x-2 sm:space-x-3 md:space-x-4 lg:space-x-5 bg-linear-to-r from-red-900 to-blue-900 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4"
+            className="flex items-center justify-center bg-linear-to-r from-indigo-900 to-indigo-800 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4"
           >
-            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white">
-              {player1Score}
-            </div>
             {showRaceToInput && isManager ? (
               <div className="flex items-center space-x-1">
                 <input
@@ -728,15 +730,12 @@ const PbsTour2Page = () => {
                 Race {raceTo}
               </button>
             )}
-            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white">
-              {player2Score}
-            </div>
           </div>
 
-          {/* Player 2 Section - Dark Blue Background */}
-          <div className="bg-blue-900 flex items-center h-12 sm:h-14 md:h-16">
+          {/* Player 2 Section - Dark Indigo (lighter): Score | Name | Photo */}
+          <div className="bg-indigo-800 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0">
             {/* Turn Indicator for Player 2 - Enhanced Chevron with Glow */}
-            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all ${
+            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all shrink-0 ${
               currentTurn === "player2" 
                 ? "opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
                 : "opacity-0"
@@ -744,20 +743,25 @@ const PbsTour2Page = () => {
               <span style={{ display: 'block', marginTop: '-0.1em' }}>›</span>
             </div>
 
-            {/* Player 2 Name */}
+            {/* Player 2 Score */}
+            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2">
+              {player2Score}
+            </div>
+
+            {/* Player 2 Name - centered */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
+              className={`flex-1 min-w-0 h-full flex items-center justify-center ${
                 canSelectPlayers
-                  ? "cursor-pointer hover:bg-blue-950"
+                  ? "cursor-pointer hover:bg-indigo-700"
                   : "cursor-default"
-              } transition-colors`}
+              } transition-colors px-2`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
                 {getPlayer2Name()}
               </div>
             </button>
@@ -776,7 +780,7 @@ const PbsTour2Page = () => {
               } ${
                 getPlayer2Photo()
                   ? "bg-transparent"
-                  : "bg-blue-800"
+                  : "bg-indigo-700"
               }`}
             >
               {getPlayer2Photo() ? (
