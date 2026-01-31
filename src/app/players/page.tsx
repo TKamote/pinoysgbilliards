@@ -30,6 +30,7 @@ const PlayersPage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Load players from Firestore on component mount
   useEffect(() => {
@@ -550,18 +551,48 @@ const PlayersPage = () => {
           </div>
         )}
 
-        {/* Players Table */}
+        {/* Search - filter by name (list order unchanged) */}
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2">
+          <label htmlFor="player-search" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            Search players:
+          </label>
+          <input
+            id="player-search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Type name to search..."
+            className="flex-1 max-w-md border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+          />
+          {searchQuery.trim() && (
+            <span className="text-sm text-gray-600">
+              Showing {players.filter((p) => p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())).length} of {players.length} players
+            </span>
+          )}
+        </div>
+
+        {/* Players Table - 150 players in 3 columns of 50 */}
+        {(() => {
+          const displayPlayers = searchQuery.trim()
+            ? players.filter((p) =>
+                p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+              )
+            : players;
+          const col1 = displayPlayers.slice(0, 50);
+          const col2 = displayPlayers.slice(50, 100);
+          const col3 = displayPlayers.slice(100, 150);
+          return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Players 1-25 */}
+          {/* Left Column - Players 1-50 */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
-                Players 1-25
+                Players 1-50
               </h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-2 py-2 text-center text-base font-medium text-gray-500 uppercase tracking-wider w-16">
                       Rank
@@ -578,7 +609,7 @@ const PlayersPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {players.slice(0, 25).map((player, i) => (
+                  {col1.map((player, i) => (
                     <tr
                       key={player.id}
                       className={`transition-colors ${
@@ -619,16 +650,16 @@ const PlayersPage = () => {
             </div>
           </div>
 
-          {/* Middle Column - Players 26-50 */}
+          {/* Middle Column - Players 51-100 */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
-                Players 26-50
+                Players 51-100
               </h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-2 py-2 text-center text-base font-medium text-gray-500 uppercase tracking-wider w-16">
                       Rank
@@ -645,7 +676,7 @@ const PlayersPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {players.slice(25, 50).map((player, i) => (
+                  {col2.map((player, i) => (
                     <tr
                       key={player.id}
                       className={`transition-colors ${
@@ -655,7 +686,7 @@ const PlayersPage = () => {
                       title={isManager ? "Click to edit" : ""}
                     >
                       <td className="px-2 py-2 text-center text-lg font-medium text-gray-900 w-16">
-                        #{i + 26}
+                        #{i + 51}
                       </td>
                       <td className="px-2 py-2 text-center w-16">
                         {player.photoURL ? (
@@ -686,16 +717,16 @@ const PlayersPage = () => {
             </div>
           </div>
 
-          {/* Right Column - Players 51-75 */}
+          {/* Right Column - Players 101-150 */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
-                Players 51-75
+                Players 101-150
               </h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-2 py-2 text-center text-base font-medium text-gray-500 uppercase tracking-wider w-16">
                       Rank
@@ -712,7 +743,7 @@ const PlayersPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {players.slice(50, 75).map((player, i) => (
+                  {col3.map((player, i) => (
                     <tr
                       key={player.id}
                       className={`transition-colors ${
@@ -722,7 +753,7 @@ const PlayersPage = () => {
                       title={isManager ? "Click to edit" : ""}
                     >
                       <td className="px-2 py-2 text-center text-lg font-medium text-gray-900 w-16">
-                        #{i + 51}
+                        #{i + 101}
                       </td>
                       <td className="px-2 py-2 text-center w-16">
                         {player.photoURL ? (
@@ -753,6 +784,8 @@ const PlayersPage = () => {
             </div>
           </div>
         </div>
+          );
+        })()}
 
         {!loading && players.length === 0 && (
           <div className="text-center py-12">
