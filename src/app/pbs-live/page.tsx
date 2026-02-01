@@ -632,8 +632,8 @@ const PbsLivePage = () => {
           />
         </div>
 
-        {/* Players Scoring Container - Bottom */}
-        <div className="mt-auto w-full max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
+        {/* Players Scoring Container - Bottom - 70% width on desktop for YouTube Shorts margin */}
+        <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
           {/* Player 1 Section - Dark Indigo: Photo | Name | Score */}
           <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0">
             {/* Player 1 Profile Photo */}
