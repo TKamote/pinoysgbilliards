@@ -709,18 +709,19 @@ const ThreePlayersPage = () => {
           </div>
         </div>
 
-        {/* Players Scoring Container - Bottom */}
-        <div className="w-full max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
+        {/* Players Scoring Container - Bottom - 80% width on desktop; 2x photos, overflow visible */}
+        <div className="w-full flex justify-center">
+          <div className="w-full md:w-[80%] flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           {/* Player 1 Section - Red Background */}
-          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16 flex-1">
-            {/* Player 1 Profile Photo */}
+          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16 flex-1 overflow-visible">
+            {/* Player 1 Profile Photo - 2x size */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-16 h-16 sm:w-[80px] sm:h-[80px] md:w-[96px] md:h-[96px] lg:w-[112px] lg:h-[112px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -786,15 +787,15 @@ const ThreePlayersPage = () => {
           </div>
 
           {/* Player 2 Section - Yellow Background */}
-          <div className="bg-yellow-600 flex items-center h-12 sm:h-14 md:h-16 flex-1">
-            {/* Player 2 Profile Photo */}
+          <div className="bg-yellow-600 flex items-center h-12 sm:h-14 md:h-16 flex-1 overflow-visible">
+            {/* Player 2 Profile Photo - 2x size */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-16 h-16 sm:w-[80px] sm:h-[80px] md:w-[96px] md:h-[96px] lg:w-[112px] lg:h-[112px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -860,15 +861,15 @@ const ThreePlayersPage = () => {
           </div>
 
           {/* Player 3 Section - Blue Background */}
-          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16 flex-1">
-            {/* Player 3 Profile Photo */}
+          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16 flex-1 overflow-visible">
+            {/* Player 3 Profile Photo - 2x size */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer3Modal(true);
                 }
               }}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-16 h-16 sm:w-[80px] sm:h-[80px] md:w-[96px] md:h-[96px] lg:w-[112px] lg:h-[112px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -931,6 +932,7 @@ const ThreePlayersPage = () => {
                 {player3Score}
               </div>
             </div>
+          </div>
           </div>
         </div>
 

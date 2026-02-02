@@ -596,14 +596,14 @@ const PbsTour2Page = () => {
           </button>
         </div>
 
-        {/* Logo - Top Left Corner, Only PBS Logo */}
+        {/* Logo - Top Left Corner, Pinoy Sargo */}
         <div
           className="absolute flex flex-col z-10 items-start"
           style={{ top: "80px", left: "30px" }}
         >
           <Image
-            src="/PBS.png"
-            alt="PBS Logo"
+            src="/PinoySargo.png"
+            alt="Pinoy Sargo"
             width={150}
             height={0}
             className="bg-white"

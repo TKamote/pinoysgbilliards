@@ -59,7 +59,7 @@ const Navigation = () => {
       href: "/pbs-tour",
     },
     {
-      name: "PBS Tour 2",
+      name: "Pinoy Sargo",
       href: "/pbs-tour-2",
     },
     {

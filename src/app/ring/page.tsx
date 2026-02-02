@@ -587,18 +587,19 @@ const LiveGenericPage = () => {
           </button>
         </div>
 
-        {/* Players Scoring Container - Bottom */}
-        <div className="mt-auto w-full max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
+        {/* Players Scoring Container - Bottom - 70% width on desktop; 2x photos, overflow visible */}
+        <div className="mt-auto w-full flex justify-center">
+          <div className="w-full md:w-[70%] flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           {/* Player 1 Section - Red Background */}
-          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16">
-            {/* Player 1 Profile Photo */}
+          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16 overflow-visible">
+            {/* Player 1 Profile Photo - 2x size */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-16 h-16 sm:w-[80px] sm:h-[80px] md:w-[96px] md:h-[96px] lg:w-[112px] lg:h-[112px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -707,7 +708,7 @@ const LiveGenericPage = () => {
           </div>
 
           {/* Player 2 Section - Blue Background */}
-          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16">
+          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16 overflow-visible">
             {/* Chevron Right Indicator for Player 2 Turn */}
             <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-opacity ${
               currentTurn === "player2" ? "opacity-100" : "opacity-0"
@@ -733,14 +734,14 @@ const LiveGenericPage = () => {
               </div>
             </button>
 
-            {/* Player 2 Profile Photo */}
+            {/* Player 2 Profile Photo - 2x size */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-16 h-16 sm:w-[80px] sm:h-[80px] md:w-[96px] md:h-[96px] lg:w-[112px] lg:h-[112px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -769,6 +770,7 @@ const LiveGenericPage = () => {
                 />
               )}
             </button>
+          </div>
           </div>
         </div>
 
