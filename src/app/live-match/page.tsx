@@ -980,9 +980,9 @@ const LiveMatchPage = () => {
         </div>
 
         {/* Players Scoring Container - Bottom - 70% width on desktop for YouTube Shorts margin */}
-        <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0">
+        <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           {/* Player 1 Section - Dark Indigo: Photo | Name | Score */}
-          <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0">
+          <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
             {/* Player 1 Profile Photo */}
             <button
               onClick={() => {
@@ -990,7 +990,7 @@ const LiveMatchPage = () => {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -1098,7 +1098,7 @@ const LiveMatchPage = () => {
           </div>
 
           {/* Player 2 Section - Dark Indigo (lighter): Score | Name | Photo */}
-          <div className="bg-indigo-800 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0">
+          <div className="bg-indigo-800 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
             {/* Chevron Right Indicator for Player 2 Turn */}
             <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-opacity shrink-0 ${
               currentTurn === "player2" ? "opacity-100" : "opacity-0"
@@ -1136,7 +1136,7 @@ const LiveMatchPage = () => {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"

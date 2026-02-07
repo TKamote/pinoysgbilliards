@@ -623,7 +623,7 @@ const PbsTour2Page = () => {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`w-16 h-16 sm:w-[80px] sm:h-[80px] md:w-[96px] md:h-[96px] lg:w-[112px] lg:h-[112px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -773,7 +773,7 @@ const PbsTour2Page = () => {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`w-16 h-16 sm:w-[80px] sm:h-[80px] md:w-[96px] md:h-[96px] lg:w-[112px] lg:h-[112px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
