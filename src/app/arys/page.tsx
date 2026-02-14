@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { useLive, GameMode } from "@/contexts/LiveContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,7 @@ interface Player {
   points: number;
 }
 
-const PbsTour2Page = () => {
+const LiveGenericPage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [player1, setPlayer1] = useState<Player | null>(null);
   const [player2, setPlayer2] = useState<Player | null>(null);
@@ -33,8 +33,7 @@ const PbsTour2Page = () => {
   const [winner, setWinner] = useState<Player | null>(null);
   const [showRaceToInput, setShowRaceToInput] = useState(false);
   const [tempRaceTo, setTempRaceTo] = useState("7");
-  const { pbsTour2IsLive, setPbsTour2IsLive, pbsTour2GameMode, setPbsTour2GameMode } =
-    useLive();
+  const { isLive, setIsLive, gameMode, setGameMode } = useLive();
   const { isManager } = useAuth();
 
   // Double-press R for reset tracking
@@ -53,12 +52,12 @@ const PbsTour2Page = () => {
   // Get player name or default
   const getPlayer1Name = () => {
     if (player1?.name) return player1.name;
-    return "P1";
+    return "Owen";
   };
 
   const getPlayer2Name = () => {
     if (player2?.name) return player2.name;
-    return "P2";
+    return "Dave";
   };
 
   // Get placeholder avatar based on player (consistent per player)
@@ -100,17 +99,9 @@ const PbsTour2Page = () => {
     }
   };
 
-  const ballNumbers = useMemo(() => {
-    const mode = pbsTour2GameMode || "9-ball";
-    const balls = getBallNumbers(mode);
-    // Debug: log to ensure balls are calculated
-    if (balls.length === 0 && mode !== "15-ball") {
-      console.log("Warning: ballNumbers is empty for mode:", mode);
-    }
-    return balls;
-  }, [pbsTour2GameMode]);
+  const ballNumbers = getBallNumbers(gameMode);
 
-  // Track which balls are pocketed
+  // Track which balls are pocketed (removed)
   const [pocketedBalls, setPocketedBalls] = useState<Set<number>>(new Set());
 
   // Fetch players from Firestore
@@ -144,7 +135,7 @@ const PbsTour2Page = () => {
   useEffect(() => {
     const loadMatchData = async () => {
       try {
-        const matchDocRef = doc(db, "current_match", "pbs-tour-2");
+        const matchDocRef = doc(db, "current_match", "live_generic");
         const matchDoc = await getDoc(matchDocRef);
 
         if (matchDoc.exists()) {
@@ -223,7 +214,7 @@ const PbsTour2Page = () => {
             matchData.gameMode &&
             ["9-ball", "10-ball", "15-ball"].includes(matchData.gameMode)
           ) {
-            setPbsTour2GameMode(matchData.gameMode as GameMode);
+            setGameMode(matchData.gameMode as GameMode);
           }
 
           // Restore raceTo
@@ -241,7 +232,7 @@ const PbsTour2Page = () => {
 
     // Load match data (will use saved photoURLs if players not loaded yet)
     loadMatchData();
-  }, [players, setPbsTour2GameMode]);
+  }, [players]);
 
   // Update player objects when players array loads (to get fresh data including updated photos)
   useEffect(() => {
@@ -277,21 +268,21 @@ const PbsTour2Page = () => {
       return;
     }
     try {
-      const matchDocRef = doc(db, "current_match", "pbs-tour-2");
+      const matchDocRef = doc(db, "current_match", "live_generic");
       await setDoc(
         matchDocRef,
         {
           player1Id: player1?.id || null,
           player2Id: player2?.id || null,
-          player1Name: player1?.name || "P1",
-          player2Name: player2?.name || "P2",
+          player1Name: player1?.name || "Owen",
+          player2Name: player2?.name || "Dave",
           player1PhotoURL: player1?.photoURL || "",
           player2PhotoURL: player2?.photoURL || "",
           player1Score,
           player2Score,
           currentTurn,
           pocketedBalls: Array.from(pocketedBalls),
-          gameMode: pbsTour2GameMode,
+          gameMode,
           raceTo,
           updatedAt: new Date().toISOString(),
         },
@@ -309,7 +300,7 @@ const PbsTour2Page = () => {
     setPlayer1(selectedPlayer);
     // Save to Firestore with all player data
     try {
-      const matchDocRef = doc(db, "current_match", "pbs-tour-2");
+      const matchDocRef = doc(db, "current_match", "live_generic");
       await setDoc(
         matchDocRef,
         {
@@ -330,7 +321,7 @@ const PbsTour2Page = () => {
     setPlayer2(selectedPlayer);
     // Save to Firestore with all player data
     try {
-      const matchDocRef = doc(db, "current_match", "pbs-tour-2");
+      const matchDocRef = doc(db, "current_match", "live_generic");
       await setDoc(
         matchDocRef,
         {
@@ -366,7 +357,7 @@ const PbsTour2Page = () => {
       saveMatchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player1Score, player2Score, currentTurn, loading, player1, player2, pocketedBalls, pbsTour2GameMode, raceTo]);
+  }, [player1Score, player2Score, currentTurn, loading, player1, player2, pocketedBalls, gameMode, raceTo]);
 
   // Handle ball click - toggles pocketed state
   const handleBallClick = (ballNumber: number) => {
@@ -375,7 +366,7 @@ const PbsTour2Page = () => {
       if (newSet.has(ballNumber)) {
         newSet.delete(ballNumber);
       } else {
-        newSet.add(ballNumber);
+      newSet.add(ballNumber);
       }
       return newSet;
     });
@@ -459,7 +450,7 @@ const PbsTour2Page = () => {
           const newValue = Math.max(1, prev - 1);
           // Save immediately to Firestore
           if (isManager && !loading) {
-            const matchDocRef = doc(db, "current_match", "pbs-tour-2");
+            const matchDocRef = doc(db, "current_match", "live_generic");
             setDoc(
               matchDocRef,
               { raceTo: newValue, updatedAt: new Date().toISOString() },
@@ -480,7 +471,7 @@ const PbsTour2Page = () => {
           const newValue = Math.min(50, prev + 1);
           // Save immediately to Firestore
           if (isManager && !loading) {
-            const matchDocRef = doc(db, "current_match", "pbs-tour-2");
+            const matchDocRef = doc(db, "current_match", "live_generic");
             setDoc(
               matchDocRef,
               { raceTo: newValue, updatedAt: new Date().toISOString() },
@@ -499,7 +490,7 @@ const PbsTour2Page = () => {
         e.preventDefault();
         const ballNumber = e.key === "0" ? 10 : parseInt(e.key);
         // Get ball numbers based on current game mode
-        const currentBallNumbers = getBallNumbers(pbsTour2GameMode);
+        const currentBallNumbers = getBallNumbers(gameMode);
         // Toggle the ball's pocketed state only if it's in the current game
         if (currentBallNumbers.includes(ballNumber)) {
           setPocketedBalls((prev) => {
@@ -574,10 +565,10 @@ const PbsTour2Page = () => {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isManager, pbsTour2IsLive, pbsTour2GameMode, handleResetBalls, loading, showWinnerModal, handleWinnerModalClose]);
+  }, [isManager, isLive, gameMode, handleResetBalls, loading, showWinnerModal, handleWinnerModalClose]);
 
   // Determine if player selection should be enabled
-  const canSelectPlayers = isManager && !pbsTour2IsLive;
+  const canSelectPlayers = isManager && !isLive;
 
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
@@ -585,52 +576,37 @@ const PbsTour2Page = () => {
         {/* Live Button - Top Right Corner */}
         <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">
           <button
-            onClick={() => setPbsTour2IsLive(!pbsTour2IsLive)}
+            onClick={() => setIsLive(!isLive)}
             className={`text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 ${
-              pbsTour2IsLive
+              isLive
                 ? "bg-linear-to-r from-red-600 to-red-800 animate-pulse"
                 : "bg-gray-500 hover:bg-gray-600"
             }`}
           >
-            {pbsTour2IsLive ? "LIVE" : "GO LIVE"}
+            {isLive ? "LIVE" : "GO LIVE"}
           </button>
         </div>
 
-        {/* Logo - Top Left Corner, Pinoy Sargo */}
-        <div
-          className="absolute flex flex-col z-10 items-start"
-          style={{ top: "80px", left: "30px" }}
-        >
-          <Image
-            src="/PinoySargo.png"
-            alt="Pinoy Sargo"
-            width={150}
-            height={0}
-            className="bg-white"
-            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
-            unoptimized
-          />
-        </div>
-
-        {/* Players Scoring Container - Bottom - 90% width on desktop; overflow-visible for enlarged photo */}
-        <div className="mt-auto w-full md:w-[90%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
-          {/* Player 1 Section - Dark Indigo: Photo | Name | Score (photo 2x size, overflow visible) */}
-          <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
-            {/* Player 1 Profile Photo - 2x (100%) enlargement, allowed to overflow */}
+        {/* Players Scoring Container - Bottom - 70% width on desktop; 2x photos, overflow visible */}
+        <div className="mt-auto w-full flex justify-center">
+          <div className="w-full md:w-[70%] flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
+          {/* Player 1 Section - Red Background */}
+          <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16 overflow-visible">
+            {/* Player 1 Profile Photo - 2x size */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
               } ${
                 getPlayer1Photo()
                   ? "bg-transparent"
-                  : "bg-indigo-800"
+                  : "bg-red-600"
               }`}
             >
               {getPlayer1Photo() ? (
@@ -653,43 +629,39 @@ const PbsTour2Page = () => {
               )}
             </button>
 
-            {/* Player 1 Name - centered */}
+            {/* Player 1 Name */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`flex-1 min-w-0 h-full flex items-center justify-center ${
+              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
                 canSelectPlayers
-                  ? "cursor-pointer hover:bg-indigo-800"
+                  ? "cursor-pointer hover:bg-red-800"
                   : "cursor-default"
-              } transition-colors px-2`}
+              } transition-colors`}
             >
-              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
                 {getPlayer1Name()}
               </div>
             </button>
 
-            {/* Player 1 Score */}
-            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2">
-              {player1Score}
-            </div>
-
-            {/* Turn Indicator for Player 1 - Enhanced Chevron with Glow */}
-            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all shrink-0 ${
-              currentTurn === "player1" 
-                ? "opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
-                : "opacity-0"
+            {/* Chevron Left Indicator for Player 1 Turn */}
+            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-opacity ${
+              currentTurn === "player1" ? "opacity-100" : "opacity-0"
             }`} style={{ lineHeight: 1 }}>
               <span style={{ display: 'block', marginTop: '-0.1em' }}>‹</span>
             </div>
           </div>
 
-          {/* Race To - Center (gradient indigo) */}
+          {/* Scores and Race To - Gradient Center */}
           <div
-            className="flex items-center justify-center bg-linear-to-r from-indigo-900 to-indigo-800 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4"
+            className="flex items-center justify-center space-x-2 sm:space-x-3 md:space-x-4 lg:space-x-5 bg-linear-to-r from-red-700 to-blue-700 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4"
           >
+            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white">
+              {player1Score}
+            </div>
             {showRaceToInput && isManager ? (
               <div className="flex items-center space-x-1">
                 <input
@@ -730,57 +702,53 @@ const PbsTour2Page = () => {
                 Race {raceTo}
               </button>
             )}
+            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white">
+              {player2Score}
+            </div>
           </div>
 
-          {/* Player 2 Section - Dark Indigo (lighter): Score | Name | Photo (photo 2x size, overflow visible) */}
-          <div className="bg-indigo-800 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
-            {/* Turn Indicator for Player 2 - Enhanced Chevron with Glow */}
-            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-all shrink-0 ${
-              currentTurn === "player2" 
-                ? "opacity-100 scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
-                : "opacity-0"
+          {/* Player 2 Section - Blue Background */}
+          <div className="bg-blue-700 flex items-center h-12 sm:h-14 md:h-16 overflow-visible">
+            {/* Chevron Right Indicator for Player 2 Turn */}
+            <div className={`text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center transition-opacity ${
+              currentTurn === "player2" ? "opacity-100" : "opacity-0"
             }`} style={{ lineHeight: 1 }}>
               <span style={{ display: 'block', marginTop: '-0.1em' }}>›</span>
             </div>
 
-            {/* Player 2 Score */}
-            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2">
-              {player2Score}
-            </div>
-
-            {/* Player 2 Name - centered */}
+            {/* Player 2 Name */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`flex-1 min-w-0 h-full flex items-center justify-center ${
+              className={`px-2 sm:px-4 md:px-8 lg:px-16 xl:px-28 h-full flex items-center ${
                 canSelectPlayers
-                  ? "cursor-pointer hover:bg-indigo-700"
+                  ? "cursor-pointer hover:bg-blue-800"
                   : "cursor-default"
-              } transition-colors px-2`}
+              } transition-colors`}
             >
-              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
+              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
                 {getPlayer2Name()}
               </div>
             </button>
 
-            {/* Player 2 Profile Photo - 2x (100%) enlargement, allowed to overflow */}
+            {/* Player 2 Profile Photo - 2x size */}
             <button
               onClick={() => {
                 if (canSelectPlayers) {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
               } ${
                 getPlayer2Photo()
                   ? "bg-transparent"
-                  : "bg-indigo-700"
+                  : "bg-blue-600"
               }`}
             >
               {getPlayer2Photo() ? (
@@ -803,44 +771,40 @@ const PbsTour2Page = () => {
               )}
             </button>
           </div>
+          </div>
         </div>
 
         {/* Billiards Ball Icons & Game Mode Selector */}
-        <div className="mt-2 sm:mt-3 md:mt-4 flex flex-col items-center px-2 pb-4">
+        <div className="mt-2 sm:mt-3 md:mt-4 flex flex-col items-center px-2">
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-wrap justify-center">
             <div className="flex space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4 bg-amber-50 rounded-full px-2 sm:px-4 md:px-6 py-1 flex-wrap justify-center">
-              {ballNumbers.length > 0 ? (
-                ballNumbers.map((ballNum) => {
-                  const isPocketed = pocketedBalls.has(ballNum);
-                  return (
-                    <div
-                      key={ballNum}
-                      onClick={() => handleBallClick(ballNum)}
-                      className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold transition-all relative ${
-                        isPocketed
-                          ? "opacity-20 cursor-default"
-                          : "cursor-pointer hover:scale-110"
-                      }`}
-                      title={
-                        isPocketed
-                          ? "Ball pocketed"
-                          : "Click to pocket/unpocket ball"
-                      }
-                    >
-                      <Image
-                        src={`/ballicons/ball-${ballNum}.png`}
-                        alt={`Ball ${ballNum}`}
-                        width={48}
-                        height={48}
-                        className="object-contain w-full h-full"
-                        unoptimized
-                      />
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-xs text-gray-500 px-2">No balls for {pbsTour2GameMode || "current"} mode</div>
-              )}
+              {ballNumbers.map((ballNum) => {
+                const isPocketed = pocketedBalls.has(ballNum);
+                return (
+                  <div
+                    key={ballNum}
+                    onClick={() => handleBallClick(ballNum)}
+                    className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center font-bold transition-all relative ${
+                      isPocketed
+                        ? "opacity-20 cursor-default"
+                        : "cursor-pointer hover:scale-110"
+                    }`}
+                    title={
+                      isPocketed
+                        ? "Ball pocketed"
+                        : "Click to pocket/unpocket ball"
+                    }
+                  >
+                    <Image
+                      src={`/ballicons/ball-${ballNum}.png`}
+                      alt={`Ball ${ballNum}`}
+                      width={48}
+                      height={48}
+                      className="object-contain w-full h-full"
+                    />
+                  </div>
+                );
+              })}
             </div>
 
             {/* Reset Icon Button - Subtle, outside background */}
@@ -908,5 +872,5 @@ const PbsTour2Page = () => {
   );
 };
 
-export default PbsTour2Page;
+export default LiveGenericPage;
 

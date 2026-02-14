@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useLive, GameMode } from "@/contexts/LiveContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,42 +35,9 @@ const Navigation = () => {
   }
 
   const navItems = [
-    {
-      name: "Tournament",
-      href: "/tournament",
-    },
-    {
-      name: "Players",
-      href: "/players",
-    },
-    {
-      name: "Matches",
-      href: "/matches",
-    },
-    {
-      name: "Live Match",
-      href: "/live-match",
-    },
-    {
-      name: "PBS Live",
-      href: "/pbs-live",
-    },
-    {
-      name: "PBS Tour",
-      href: "/pbs-tour",
-    },
-    {
-      name: "Pinoy Sargo",
-      href: "/pbs-tour-2",
-    },
-    {
-      name: "3 Players",
-      href: "/3-players",
-    },
-    {
-      name: "Ring",
-      href: "/ring",
-    },
+    { name: "Home", href: "/home" },
+    { name: "Players", href: "/players" },
+    { name: "Invitational", href: "/invitational" },
   ];
 
   return (
@@ -78,9 +46,17 @@ const Navigation = () => {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="shrink-0 flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">
-                Pinoy SG Billiards
-              </h1>
+              <Link href="/home" className="flex items-center">
+                <Image
+                  src="/PinoySGTumbnailYT.png"
+                  alt="Pinoy SG Billiards"
+                  width={192}
+                  height={58}
+                  className="h-12 w-auto sm:h-14 rounded-[10%]"
+                  priority
+                  unoptimized
+                />
+              </Link>
             </div>
             {/* Desktop Navigation */}
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -106,7 +82,7 @@ const Navigation = () => {
 
           {/* Game Mode Selector - Placed on the right */}
           <div className="flex items-center">
-            {isManager && pathname === "/live-match" && (
+            {isManager && (pathname === "/live-match" || pathname === "/arys") && (
               <div className="hidden sm:flex items-center space-x-2 mr-4">
                 <label
                   htmlFor="gameMode"
@@ -264,7 +240,7 @@ const Navigation = () => {
         <div className={`${isMobileMenuOpen ? "block" : "hidden"} sm:hidden`}>
           <div className="pt-2 pb-3 space-y-1">
             {/* Game Mode Selector in Mobile Menu */}
-            {isManager && pathname === "/live-match" && (
+            {isManager && (pathname === "/live-match" || pathname === "/arys") && (
               <div className="px-4 py-2">
                 <label
                   htmlFor="mobileGameMode"

@@ -571,23 +571,23 @@ const PlayersPage = () => {
           )}
         </div>
 
-        {/* Players Table - 150 players in 3 columns of 50 */}
+        {/* Players Table - 225 players in 3 columns of 75 */}
         {(() => {
           const displayPlayers = searchQuery.trim()
             ? players.filter((p) =>
                 p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
               )
             : players;
-          const col1 = displayPlayers.slice(0, 50);
-          const col2 = displayPlayers.slice(50, 100);
-          const col3 = displayPlayers.slice(100, 150);
+          const col1 = displayPlayers.slice(0, 75);
+          const col2 = displayPlayers.slice(75, 150);
+          const col3 = displayPlayers.slice(150, 225);
           return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Players 1-50 */}
+          {/* Left Column - Players 1-75 */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
-                Players 1-50
+                Players 1-75
               </h3>
             </div>
             <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
@@ -650,11 +650,11 @@ const PlayersPage = () => {
             </div>
           </div>
 
-          {/* Middle Column - Players 51-100 */}
+          {/* Middle Column - Players 76-150 */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
-                Players 51-100
+                Players 76-150
               </h3>
             </div>
             <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
@@ -686,7 +686,7 @@ const PlayersPage = () => {
                       title={isManager ? "Click to edit" : ""}
                     >
                       <td className="px-2 py-2 text-center text-lg font-medium text-gray-900 w-16">
-                        #{i + 51}
+                        #{i + 76}
                       </td>
                       <td className="px-2 py-2 text-center w-16">
                         {player.photoURL ? (
@@ -717,11 +717,11 @@ const PlayersPage = () => {
             </div>
           </div>
 
-          {/* Right Column - Players 101-150 */}
+          {/* Right Column - Players 151-225 */}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b">
               <h3 className="text-lg font-semibold text-gray-900">
-                Players 101-150
+                Players 151-225
               </h3>
             </div>
             <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
@@ -753,7 +753,7 @@ const PlayersPage = () => {
                       title={isManager ? "Click to edit" : ""}
                     >
                       <td className="px-2 py-2 text-center text-lg font-medium text-gray-900 w-16">
-                        #{i + 101}
+                        #{i + 151}
                       </td>
                       <td className="px-2 py-2 text-center w-16">
                         {player.photoURL ? (

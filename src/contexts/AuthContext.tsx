@@ -7,7 +7,10 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+
+export type UserRole = "manager" | "user";
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +18,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isManager: boolean;
+  userRole: UserRole | null;
   username: string | null;
 }
 
@@ -32,16 +36,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user) {
-        // Extract username from email (part before @)
-        const emailUsername = user.email?.split("@")[0] || "Manager";
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        const emailUsername = firebaseUser.email?.split("@")[0] || "User";
         setUsername(emailUsername);
+        try {
+          // Role from Firestore users/{uid}.role: "manager" | "user"
+          // Create docs in Firestore: users collection, doc id = auth uid, field role = "manager" or "user"
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          const role = userDoc.exists() && userDoc.data()?.role === "manager"
+            ? "manager"
+            : "user";
+          setUserRole(role);
+        } catch {
+          setUserRole("user");
+        }
       } else {
         setUsername(null);
+        setUserRole(null);
       }
       setLoading(false);
     });
@@ -67,8 +83,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // For now, any authenticated user is considered a manager
-  // In the future, you can add role-based logic here
   const isManager = !!user;
 
   const value = {
@@ -77,6 +91,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signIn,
     signOut,
     isManager,
+    userRole,
     username,
   };
 
