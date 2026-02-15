@@ -29,11 +29,6 @@ const Navigation = () => {
   const { isManager } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Don't render navigation when live
-  if (isLive || pbsLiveIsLive || pbsTourIsLive || pbsTour2IsLive || threePlayersIsLive) {
-    return null;
-  }
-
   const navItems = [
     { name: "Home", href: "/home" },
     { name: "Players", href: "/players" },
@@ -62,16 +57,26 @@ const Navigation = () => {
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
+                const isPlayers = item.href === "/players";
+                const linkClass = `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
+                  isActive
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                }`;
 
-                return (
+                return isPlayers ? (
+                  <a
+                    key={item.name}
+                    href="/players"
+                    className={linkClass}
+                  >
+                    {item.name}
+                  </a>
+                ) : (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 ${
-                      isActive
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                    }`}
+                    className={linkClass}
                   >
                     {item.name}
                   </Link>
@@ -357,16 +362,27 @@ const Navigation = () => {
             )}
             {navItems.map((item) => {
               const isActive = pathname === item.href;
+              const isPlayers = item.href === "/players";
+              const linkClass = `block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200 ${
+                isActive
+                  ? "bg-blue-50 border-blue-500 text-blue-700"
+                  : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
+              }`;
 
-              return (
+              return isPlayers ? (
+                <a
+                  key={item.name}
+                  href="/players"
+                  className={linkClass}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {item.name}
+                </a>
+              ) : (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors duration-200 ${
-                    isActive
-                      ? "bg-blue-50 border-blue-500 text-blue-700"
-                      : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-                  }`}
+                  className={linkClass}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.name}

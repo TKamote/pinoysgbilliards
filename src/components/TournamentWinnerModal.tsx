@@ -21,18 +21,12 @@ interface Match {
   bracket: string;
 }
 
-const ROUND_LABEL: Record<string, string> = {
-  m1: "WB R1", m2: "WB R1", m3: "WB R1", m4: "WB R1",
-  m5: "WB R2", m6: "WB R2", m7: "WB Final",
-  m8: "LB R1", m9: "LB R1", m10: "LB R2", m11: "LB R2",
-  m12: "LB R3", m13: "LB Final", m14: "Grand Final", m15: "Bracket Reset",
-};
-
 interface TournamentWinnerModalProps {
   isOpen: boolean;
   onClose: () => void;
   champion: Player | null;
   matches: Match[];
+  formatLabel?: string; // e.g. "8-Player Double Elimination"
 }
 
 export default function TournamentWinnerModal({
@@ -40,15 +34,15 @@ export default function TournamentWinnerModal({
   onClose,
   champion,
   matches,
+  formatLabel = "8-Player Double Elimination",
 }: TournamentWinnerModalProps) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
       <div className="bg-amber-50/95 backdrop-blur rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col border-2 border-amber-200">
-        {/* In-modal header */}
         <div className="flex items-center justify-between p-4 border-b border-amber-200/80">
-          <span className="text-lg font-bold text-amber-900">Tournament complete</span>
+          <span className="text-lg font-bold text-amber-900">Results / Progress</span>
           <button
             type="button"
             onClick={onClose}
@@ -59,32 +53,32 @@ export default function TournamentWinnerModal({
           </button>
         </div>
 
-        {/* Receipt content - capture target for PNG/Print */}
         <div className="flex-1 overflow-auto p-4">
           <div
             className="tournament-receipt-print bg-[#fefce8] text-amber-950 rounded-xl p-5 border-2 border-amber-300/80 shadow-inner"
             style={{ fontFamily: "ui-monospace, monospace" }}
           >
-            {/* Receipt header */}
             <div className="text-center border-b-2 border-dashed border-amber-400 pb-3 mb-3">
               <p className="text-xs uppercase tracking-[0.3em] text-amber-700 font-semibold">
                 Pinoy SG Billiards
               </p>
               <p className="text-sm font-bold text-amber-900 mt-1">INVITATIONAL</p>
-              <p className="text-xs text-amber-600 mt-0.5">8-Player Double Elimination</p>
+              <p className="text-xs text-amber-600 mt-0.5">{formatLabel}</p>
             </div>
 
-            {/* Champion block */}
-            {champion && (
-              <div className="text-center mb-4 p-3 rounded-lg bg-amber-300/40 border-2 border-amber-500">
-                <p className="text-[10px] uppercase tracking-widest text-amber-700 font-bold mb-0.5">
-                  Champion
-                </p>
-                <p className="text-xl font-bold text-amber-950">
-                  {champion.name} <span className="text-amber-600" aria-hidden="true">🏆</span>
-                </p>
-              </div>
-            )}
+            {/* Champion block: show name + 🏆 when champion, else TBD */}
+            <div className="text-center mb-4 p-3 rounded-lg bg-amber-300/40 border-2 border-amber-500">
+              <p className="text-[10px] uppercase tracking-widest text-amber-700 font-bold mb-0.5">
+                Champion
+              </p>
+              <p className="text-xl font-bold text-amber-950">
+                {champion ? (
+                  <> {champion.name} <span className="text-amber-600" aria-hidden="true">🏆</span> </>
+                ) : (
+                  <span className="text-amber-600 font-normal">TBD</span>
+                )}
+              </p>
+            </div>
 
             {/* Match list */}
             <div className="border-t border-dashed border-amber-400 pt-2">
@@ -96,7 +90,7 @@ export default function TournamentWinnerModal({
                 const p2 = m.player2?.name ?? "—";
                 const s1 = m.score1 ?? 0;
                 const s2 = m.score2 ?? 0;
-                const round = ROUND_LABEL[m.id] ?? m.round;
+                const round = m.round ?? "—";
                 const winnerIs1 = m.winner === "player1";
                 const winnerIs2 = m.winner === "player2";
                 return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   collection,
   getDocs,
@@ -26,39 +26,58 @@ interface Player {
 }
 
 const PlayersPage = () => {
-  const { isManager } = useAuth();
+  const { user } = useAuth();
+  const canEditPlayers = !!user;
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const mountedRef = useRef(true);
 
-  // Load players from Firestore on component mount
-  useEffect(() => {
-    const loadPlayers = async () => {
-      try {
-        setLoading(true);
-        const playersCollection = collection(db, "players");
-        const playersSnapshot = await getDocs(playersCollection);
-        const playersList = playersSnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            points: data.points || 0, // Ensure points exists with default value
-          };
-        }) as Player[];
-
-        // Sort players by points in descending order (higher points = better rank)
-        const sortedPlayers = playersList.sort((a, b) => b.points - a.points);
-        setPlayers(sortedPlayers);
-      } catch (error) {
-        console.error("Error loading players:", error);
-      } finally {
-        setLoading(false);
+  const loadPlayers = async () => {
+    try {
+      setLoading(true);
+      setLoadError(null);
+      const playersCollection = collection(db, "players");
+      const playersSnapshot = await getDocs(playersCollection);
+      const playersList = playersSnapshot.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name ?? "",
+          email: data.email ?? "",
+          phone: data.phone ?? "",
+          skillLevel: (data.skillLevel ?? "beginner") as Player["skillLevel"],
+          rating: typeof data.rating === "number" ? data.rating : 0,
+          points: typeof data.points === "number" ? data.points : 0,
+          tournamentsPlayed: typeof data.tournamentsPlayed === "number" ? data.tournamentsPlayed : 0,
+          wins: typeof data.wins === "number" ? data.wins : 0,
+          status: (data.status ?? "active") as Player["status"],
+          photoURL: data.photoURL,
+        };
+      });
+      const sorted = playersList.sort((a, b) => b.points - a.points);
+      if (mountedRef.current) {
+        setPlayers(sorted);
       }
-    };
+    } catch (error) {
+      console.error("Error loading players:", error);
+      if (mountedRef.current) {
+        setLoadError(error instanceof Error ? error.message : "Failed to load players");
+        setPlayers([]);
+      }
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    mountedRef.current = true;
     loadPlayers();
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -137,7 +156,7 @@ const PlayersPage = () => {
   };
 
   const handleEditPlayer = (player: Player) => {
-    if (!isManager) {
+    if (!canEditPlayers) {
       setShowLoginPrompt(true);
       return;
     }
@@ -294,7 +313,7 @@ const PlayersPage = () => {
   };
 
   const handleAddPlayerClick = () => {
-    if (!isManager) {
+    if (!canEditPlayers) {
       setShowLoginPrompt(true);
       return;
     }
@@ -357,10 +376,24 @@ const PlayersPage = () => {
           </button>
         </div>
 
-        {loading && players.length === 0 && (
+        {loading && players.length === 0 && !loadError && (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">⏳</div>
             <p className="text-gray-600">Loading players...</p>
+          </div>
+        )}
+
+        {loadError && (
+          <div className="text-center py-12 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-amber-800 font-medium mb-2">Could not load players</p>
+            <p className="text-sm text-amber-700 mb-4">{loadError}</p>
+            <button
+              type="button"
+              onClick={() => loadPlayers()}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -371,17 +404,16 @@ const PlayersPage = () => {
               <div className="text-center">
                 <div className="text-6xl mb-4">🔒</div>
                 <h2 className="text-2xl font-bold mb-2 text-gray-900">
-                  Manager Login Required
+                  Login Required
                 </h2>
                 <p className="text-gray-600 mb-6">
-                  Only logged-in managers can add or edit players. Please login
-                  to continue.
+                  Please log in to add or edit players.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button
                     onClick={() => {
                       setShowLoginPrompt(false);
-                      window.location.href = "/tournament"; // Redirect to tournament page where login button is
+                      window.location.href = "/home";
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
                   >
@@ -571,8 +603,8 @@ const PlayersPage = () => {
           )}
         </div>
 
-        {/* Players Table - 225 players in 3 columns of 75 */}
-        {(() => {
+        {/* Players Table - show when we have data or when not in error state */}
+        {(!loadError || players.length > 0) && (() => {
           const displayPlayers = searchQuery.trim()
             ? players.filter((p) =>
                 p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
@@ -613,10 +645,10 @@ const PlayersPage = () => {
                     <tr
                       key={player.id}
                       className={`transition-colors ${
-                        isManager ? "hover:bg-blue-50 cursor-pointer" : ""
+                        canEditPlayers ? "hover:bg-blue-50 cursor-pointer" : ""
                       }`}
                       onClick={() => handleEditPlayer(player)}
-                      title={isManager ? "Click to edit" : ""}
+                      title={canEditPlayers ? "Click to edit" : ""}
                     >
                       <td className="px-2 py-2 text-center text-lg font-medium text-gray-900 w-16">
                         #{i + 1}
@@ -680,10 +712,10 @@ const PlayersPage = () => {
                     <tr
                       key={player.id}
                       className={`transition-colors ${
-                        isManager ? "hover:bg-blue-50 cursor-pointer" : ""
+                        canEditPlayers ? "hover:bg-blue-50 cursor-pointer" : ""
                       }`}
                       onClick={() => handleEditPlayer(player)}
-                      title={isManager ? "Click to edit" : ""}
+                      title={canEditPlayers ? "Click to edit" : ""}
                     >
                       <td className="px-2 py-2 text-center text-lg font-medium text-gray-900 w-16">
                         #{i + 76}
@@ -747,10 +779,10 @@ const PlayersPage = () => {
                     <tr
                       key={player.id}
                       className={`transition-colors ${
-                        isManager ? "hover:bg-blue-50 cursor-pointer" : ""
+                        canEditPlayers ? "hover:bg-blue-50 cursor-pointer" : ""
                       }`}
                       onClick={() => handleEditPlayer(player)}
-                      title={isManager ? "Click to edit" : ""}
+                      title={canEditPlayers ? "Click to edit" : ""}
                     >
                       <td className="px-2 py-2 text-center text-lg font-medium text-gray-900 w-16">
                         #{i + 151}
@@ -787,7 +819,7 @@ const PlayersPage = () => {
           );
         })()}
 
-        {!loading && players.length === 0 && (
+        {!loadError && !loading && players.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">👥</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">

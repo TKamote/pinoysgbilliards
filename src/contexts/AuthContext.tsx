@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const isManager = !!user;
+  const isManager = userRole === "manager";
 
   const value = {
     user,

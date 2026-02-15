@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   collection,
   getDocs,
@@ -11,6 +12,15 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import TournamentWinnerModal from "@/components/TournamentWinnerModal";
+
+export type InvitationalTab = "8-double" | "8-single" | "4-double" | "4-single";
+const TABS: { id: InvitationalTab; label: string }[] = [
+  { id: "8-double", label: "8 Double" },
+  { id: "8-single", label: "8 Single" },
+  { id: "4-double", label: "4 Double" },
+  { id: "4-single", label: "4 Single" },
+];
+const DEFAULT_TAB: InvitationalTab = "8-double";
 
 // Types
 interface Player {
@@ -34,43 +44,102 @@ interface Match {
   bracket: "winners" | "losers";
 }
 
-// 8-player double elimination: 15 matches (7 WB + 6 LB + Grand Final + Bracket Reset)
-const INVITATIONAL_MATCH_IDS = ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11", "m12", "m13", "m14", "m15"] as const;
 type Slot = "player1" | "player2";
 
-const ADVANCEMENT: Record<
+// 8-player double elimination: 15 matches (format prefix 8-de- for Option B independence)
+const MATCH_IDS_8_DE = ["8-de-m1", "8-de-m2", "8-de-m3", "8-de-m4", "8-de-m5", "8-de-m6", "8-de-m7", "8-de-m8", "8-de-m9", "8-de-m10", "8-de-m11", "8-de-m12", "8-de-m13", "8-de-m14", "8-de-m15"] as const;
+
+const ADVANCEMENT_8_DE: Record<
   string,
   { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }
 > = {
-  m1: { winner: { nextId: "m5", slot: "player1" }, loser: { nextId: "m8", slot: "player1" } },
-  m2: { winner: { nextId: "m5", slot: "player2" }, loser: { nextId: "m8", slot: "player2" } },
-  m3: { winner: { nextId: "m6", slot: "player1" }, loser: { nextId: "m9", slot: "player1" } },
-  m4: { winner: { nextId: "m6", slot: "player2" }, loser: { nextId: "m9", slot: "player2" } },
-  m5: { winner: { nextId: "m7", slot: "player1" }, loser: { nextId: "m10", slot: "player1" } },
-  m6: { winner: { nextId: "m7", slot: "player2" }, loser: { nextId: "m11", slot: "player1" } },
-  m7: { winner: { nextId: "m14", slot: "player1" }, loser: { nextId: "m13", slot: "player1" } },
-  m8: { winner: { nextId: "m10", slot: "player2" } },
-  m9: { winner: { nextId: "m11", slot: "player2" } },
-  m10: { winner: { nextId: "m12", slot: "player1" } },
-  m11: { winner: { nextId: "m12", slot: "player2" } },
-  m12: { winner: { nextId: "m13", slot: "player2" } },
-  m13: { winner: { nextId: "m14", slot: "player2" } },
-  // m14: when LB champion wins we fill m15 with same two players (handled in handleSaveMatch)
-  m15: {},
+  "8-de-m1": { winner: { nextId: "8-de-m5", slot: "player1" }, loser: { nextId: "8-de-m8", slot: "player1" } },
+  "8-de-m2": { winner: { nextId: "8-de-m5", slot: "player2" }, loser: { nextId: "8-de-m8", slot: "player2" } },
+  "8-de-m3": { winner: { nextId: "8-de-m6", slot: "player1" }, loser: { nextId: "8-de-m9", slot: "player1" } },
+  "8-de-m4": { winner: { nextId: "8-de-m6", slot: "player2" }, loser: { nextId: "8-de-m9", slot: "player2" } },
+  "8-de-m5": { winner: { nextId: "8-de-m7", slot: "player1" }, loser: { nextId: "8-de-m10", slot: "player1" } },
+  "8-de-m6": { winner: { nextId: "8-de-m7", slot: "player2" }, loser: { nextId: "8-de-m11", slot: "player1" } },
+  "8-de-m7": { winner: { nextId: "8-de-m14", slot: "player1" }, loser: { nextId: "8-de-m13", slot: "player1" } },
+  "8-de-m8": { winner: { nextId: "8-de-m10", slot: "player2" } },
+  "8-de-m9": { winner: { nextId: "8-de-m11", slot: "player2" } },
+  "8-de-m10": { winner: { nextId: "8-de-m12", slot: "player1" } },
+  "8-de-m11": { winner: { nextId: "8-de-m12", slot: "player2" } },
+  "8-de-m12": { winner: { nextId: "8-de-m13", slot: "player2" } },
+  "8-de-m13": { winner: { nextId: "8-de-m14", slot: "player2" } },
+  "8-de-m15": {},
 };
 
-const ROUND_LABEL: Record<string, string> = {
-  m1: "WB R1", m2: "WB R1", m3: "WB R1", m4: "WB R1",
-  m5: "WB R2", m6: "WB R2", m7: "WB Final",
-  m8: "LB R1", m9: "LB R1", m10: "LB R2", m11: "LB R2",
-  m12: "LB R3", m13: "LB Final", m14: "Grand Final", m15: "Bracket Reset",
+const ROUND_LABEL_8_DE: Record<string, string> = {
+  "8-de-m1": "WB R1", "8-de-m2": "WB R1", "8-de-m3": "WB R1", "8-de-m4": "WB R1",
+  "8-de-m5": "WB R2", "8-de-m6": "WB R2", "8-de-m7": "WB Final",
+  "8-de-m8": "LB R1", "8-de-m9": "LB R1", "8-de-m10": "LB R2", "8-de-m11": "LB R2",
+  "8-de-m12": "LB R3", "8-de-m13": "LB Final", "8-de-m14": "Grand Final", "8-de-m15": "Bracket Reset",
+};
+
+// 8-player single elimination: 7 matches (R1 → Semis → Final)
+const MATCH_IDS_8_SE = ["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4", "8-se-m5", "8-se-m6", "8-se-m7"] as const;
+const ADVANCEMENT_8_SE: Record<string, { winner?: { nextId: string; slot: Slot } }> = {
+  "8-se-m1": { winner: { nextId: "8-se-m5", slot: "player1" } },
+  "8-se-m2": { winner: { nextId: "8-se-m5", slot: "player2" } },
+  "8-se-m3": { winner: { nextId: "8-se-m6", slot: "player1" } },
+  "8-se-m4": { winner: { nextId: "8-se-m6", slot: "player2" } },
+  "8-se-m5": { winner: { nextId: "8-se-m7", slot: "player1" } },
+  "8-se-m6": { winner: { nextId: "8-se-m7", slot: "player2" } },
+  "8-se-m7": {},
+};
+const ROUND_LABEL_8_SE: Record<string, string> = {
+  "8-se-m1": "R1", "8-se-m2": "R1", "8-se-m3": "R1", "8-se-m4": "R1",
+  "8-se-m5": "Semis", "8-se-m6": "Semis", "8-se-m7": "Final",
+};
+
+// 4-player double elimination: 7 matches (WB R1, WB Final, LB R1, LB Final, GF, Bracket Reset)
+const MATCH_IDS_4_DE = ["4-de-m1", "4-de-m2", "4-de-m3", "4-de-m4", "4-de-m5", "4-de-m6", "4-de-m7"] as const;
+const ADVANCEMENT_4_DE: Record<
+  string,
+  { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }
+> = {
+  "4-de-m1": { winner: { nextId: "4-de-m3", slot: "player1" }, loser: { nextId: "4-de-m4", slot: "player1" } },
+  "4-de-m2": { winner: { nextId: "4-de-m3", slot: "player2" }, loser: { nextId: "4-de-m4", slot: "player2" } },
+  "4-de-m3": { winner: { nextId: "4-de-m6", slot: "player1" }, loser: { nextId: "4-de-m5", slot: "player1" } },
+  "4-de-m4": { winner: { nextId: "4-de-m5", slot: "player2" } },
+  "4-de-m5": { winner: { nextId: "4-de-m6", slot: "player2" } },
+  "4-de-m6": {}, // Champion or bracket reset m7 filled in code
+  "4-de-m7": {},
+};
+const ROUND_LABEL_4_DE: Record<string, string> = {
+  "4-de-m1": "WB R1", "4-de-m2": "WB R1", "4-de-m3": "WB Final",
+  "4-de-m4": "LB R1", "4-de-m5": "LB Final", "4-de-m6": "Grand Final", "4-de-m7": "Bracket Reset",
+};
+
+// 4-player single elimination: 3 matches (Semis → Final)
+const MATCH_IDS_4_SE = ["4-se-m1", "4-se-m2", "4-se-m3"] as const;
+const ADVANCEMENT_4_SE: Record<string, { winner?: { nextId: string; slot: Slot } }> = {
+  "4-se-m1": { winner: { nextId: "4-se-m3", slot: "player1" } },
+  "4-se-m2": { winner: { nextId: "4-se-m3", slot: "player2" } },
+  "4-se-m3": {},
+};
+const ROUND_LABEL_4_SE: Record<string, string> = {
+  "4-se-m1": "Semis", "4-se-m2": "Semis", "4-se-m3": "Final",
 };
 
 const InvitationalPage = () => {
-  // Authentication
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { isManager, loading: authLoading } = useAuth();
 
-  // State management
+  const activeTab = useMemo((): InvitationalTab => {
+    const t = searchParams.get("tab");
+    if (t === "8-double" || t === "8-single" || t === "4-double" || t === "4-single") return t;
+    return DEFAULT_TAB;
+  }, [searchParams]);
+
+  const setActiveTab = useCallback(
+    (tab: InvitationalTab) => {
+      router.replace("/invitational?tab=" + tab);
+    },
+    [router]
+  );
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -91,33 +160,58 @@ const InvitationalPage = () => {
   // Tournament winner modal (champion + receipt)
   const [showTournamentWinnerModal, setShowTournamentWinnerModal] = useState(false);
 
-  // Initialize 15 matches for 8-player double elimination (M1–M15)
-  const initializeMatches = useCallback(async () => {
-    console.log("Initializing Invitational matches (15)...");
-    const allMatches: Match[] = INVITATIONAL_MATCH_IDS.map((id, i) => ({
-      id,
-      matchNumber: `M${i + 1}`,
-      score1: 0,
-      score2: 0,
-      raceTo: 9,
-      status: "pending" as const,
-      round: ROUND_LABEL[id] ?? "—",
-      bracket: i < 7 ? ("winners" as const) : ("losers" as const),
-    }));
-    // m15 is bracket reset: show in UI but no players until LB wins m14
-    console.log("Created matches:", allMatches.length);
-    setMatches(allMatches);
-
-    try {
-      const matchesRef = collection(db, "matches");
-      for (const match of allMatches) {
-        await setDoc(doc(matchesRef, match.id), match);
-      }
-      console.log("All Invitational matches saved to Firebase.");
-    } catch (error) {
-      console.error("Error saving matches to Firebase:", error);
-    }
+  const getMatchIdsForTab = useCallback((tab: InvitationalTab): readonly string[] => {
+    if (tab === "8-double") return MATCH_IDS_8_DE;
+    if (tab === "8-single") return MATCH_IDS_8_SE;
+    if (tab === "4-double") return MATCH_IDS_4_DE;
+    if (tab === "4-single") return MATCH_IDS_4_SE;
+    return [];
   }, []);
+
+  const getRoundLabel = useCallback((tab: InvitationalTab, id: string): string => {
+    if (tab === "8-double") return ROUND_LABEL_8_DE[id] ?? "—";
+    if (tab === "8-single") return ROUND_LABEL_8_SE[id] ?? "—";
+    if (tab === "4-double") return ROUND_LABEL_4_DE[id] ?? "—";
+    if (tab === "4-single") return ROUND_LABEL_4_SE[id] ?? "—";
+    return "—";
+  }, []);
+
+  const getBracketForTab = useCallback((tab: InvitationalTab, id: string): "winners" | "losers" => {
+    if (tab === "8-double") return (MATCH_IDS_8_DE.indexOf(id as (typeof MATCH_IDS_8_DE)[number]) < 7) ? "winners" : "losers";
+    if (tab === "8-single") return "winners";
+    if (tab === "4-double") return (["4-de-m1", "4-de-m2", "4-de-m3"].includes(id)) ? "winners" : "losers";
+    if (tab === "4-single") return "winners";
+    return "winners";
+  }, []);
+
+  const initializeMatches = useCallback(
+    async (tab: InvitationalTab) => {
+      const ids = getMatchIdsForTab(tab);
+      if (ids.length === 0) return;
+      console.log(`Initializing ${tab} matches (${ids.length})...`);
+      const allMatches: Match[] = ids.map((id, i) => ({
+        id,
+        matchNumber: `M${i + 1}`,
+        score1: 0,
+        score2: 0,
+        raceTo: 9,
+        status: "pending" as const,
+        round: getRoundLabel(tab, id),
+        bracket: getBracketForTab(tab, id),
+      }));
+      setMatches(allMatches);
+      try {
+        const matchesRef = collection(db, "matches");
+        for (const match of allMatches) {
+          await setDoc(doc(matchesRef, match.id), match);
+        }
+        console.log(`${tab} matches saved to Firebase.`);
+      } catch (error) {
+        console.error("Error saving matches to Firebase:", error);
+      }
+    },
+    [getMatchIdsForTab, getRoundLabel, getBracketForTab]
+  );
 
   // Load players and matches from Firebase
   useEffect(() => {
@@ -140,33 +234,14 @@ const InvitationalPage = () => {
         // Check if matches exist in Firebase
         console.log("Checking for existing matches in Firebase...");
         const matchesSnapshot = await getDocs(collection(db, "matches"));
-        if (matchesSnapshot.empty) {
-          console.log("No matches found.");
-          if (isManager) {
-            console.log("Manager logged in, initializing matches...");
-            await initializeMatches();
-          } else {
-            // Still seed 15 match slots so bracket renders and modal can open after login
-            const defaults: Match[] = INVITATIONAL_MATCH_IDS.map((id, i) => ({
-              id,
-              matchNumber: `M${i + 1}`,
-              score1: 0,
-              score2: 0,
-              raceTo: 9,
-              status: "pending" as const,
-              round: ROUND_LABEL[id] ?? "—",
-              bracket: i < 7 ? ("winners" as const) : ("losers" as const),
-            }));
-            setMatches(defaults);
-          }
-        } else {
-          console.log("Loading existing matches from Firebase...");
-          const raw = matchesSnapshot.docs.map((docSnap) => ({
-            id: docSnap.id,
-            ...docSnap.data(),
-          })) as Match[];
-          // Normalize to exactly 15 Invitational matches (m1–m15) so bracket and modal always work
-          const normalized: Match[] = INVITATIONAL_MATCH_IDS.map((id, i) => {
+        const raw = matchesSnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        })) as Match[];
+
+        const ids = getMatchIdsForTab(activeTab);
+        if (ids.length > 0) {
+          const normalized: Match[] = ids.map((id, i) => {
             const existing = raw.find((m) => m.id === id);
             if (existing) return existing;
             return {
@@ -176,12 +251,19 @@ const InvitationalPage = () => {
               score2: 0,
               raceTo: 9,
               status: "pending" as const,
-              round: ROUND_LABEL[id] ?? "—",
-              bracket: i < 7 ? ("winners" as const) : ("losers" as const),
+              round: getRoundLabel(activeTab, id),
+              bracket: getBracketForTab(activeTab, id),
             };
           });
-          console.log("Loaded matches:", normalized.length);
-          setMatches(normalized);
+          const hasAny = raw.some((m) => ids.includes(m.id));
+          if (!hasAny && isManager) {
+            console.log(`No ${activeTab} matches, initializing...`);
+            await initializeMatches(activeTab);
+          } else {
+            setMatches(normalized);
+          }
+        } else {
+          setMatches([]);
         }
         setLoading(false);
       } catch (error) {
@@ -192,24 +274,21 @@ const InvitationalPage = () => {
     };
 
     loadData();
-  }, [initializeMatches, isManager, authLoading]);
+  }, [initializeMatches, isManager, authLoading, activeTab, getMatchIdsForTab, getRoundLabel, getBracketForTab]);
 
-  // Initialize matches when manager logs in (if matches don't exist)
   useEffect(() => {
     if (authLoading || loading) return;
 
     const checkAndInitialize = async () => {
       if (!isManager) return;
-
+      const ids = getMatchIdsForTab(activeTab);
+      if (ids.length === 0) return;
       try {
         const matchesSnapshot = await getDocs(collection(db, "matches"));
-        if (
-          matchesSnapshot.empty &&
-          matches.length === 0 &&
-          players.length > 0
-        ) {
-          console.log("Manager logged in, initializing matches now...");
-          await initializeMatches();
+        const hasAny = matchesSnapshot.docs.some((d) => ids.includes(d.id));
+        if (!hasAny && matches.length === 0 && players.length > 0) {
+          console.log(`Manager logged in, initializing ${activeTab} now...`);
+          await initializeMatches(activeTab);
         }
       } catch (error) {
         console.error("Error checking matches after login:", error);
@@ -217,14 +296,7 @@ const InvitationalPage = () => {
     };
 
     checkAndInitialize();
-  }, [
-    isManager,
-    authLoading,
-    loading,
-    matches.length,
-    players.length,
-    initializeMatches,
-  ]);
+  }, [isManager, authLoading, loading, activeTab, matches.length, players.length, initializeMatches, getMatchIdsForTab]);
 
   // Handle match click
   const handleMatchClick = (matchId: string) => {
@@ -407,62 +479,16 @@ const InvitationalPage = () => {
       return;
     }
 
-    // Post-save: if completed, apply advancement and optionally fill M15
-    if (isCompleted && player1 && player2) {
-      const adv = ADVANCEMENT[selectedMatch.id];
-      const winnerPlayer = winner === "player1" ? player1 : player2;
-      const loserPlayer = winner === "player1" ? player2 : player1;
+    const setNextMatchSlot = (matchId: string, slot: Slot, player: Player) => {
+      const idx = nextMatches.findIndex((m) => m.id === matchId);
+      if (idx === -1) return;
+      const m = { ...nextMatches[idx] };
+      if (slot === "player1") m.player1 = player;
+      else m.player2 = player;
+      nextMatches = nextMatches.slice(0, idx).concat(m, nextMatches.slice(idx + 1));
+    };
 
-      const setNextMatchSlot = (matchId: string, slot: Slot, player: Player) => {
-        const idx = nextMatches.findIndex((m) => m.id === matchId);
-        if (idx === -1) return;
-        const m = { ...nextMatches[idx] };
-        if (slot === "player1") m.player1 = player;
-        else m.player2 = player;
-        nextMatches = nextMatches.slice(0, idx).concat(m, nextMatches.slice(idx + 1));
-      };
-
-      if (adv?.winner) {
-        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
-      }
-      if (adv?.loser) {
-        setNextMatchSlot(adv.loser.nextId, adv.loser.slot, loserPlayer);
-      }
-
-      // Grand Final: if LB champion won M14, fill M15 with same two players
-      if (selectedMatch.id === "m14") {
-        const m13 = nextMatches.find((m) => m.id === "m13");
-        const lbChampion =
-          m13?.winner && m13.player1 && m13.player2
-            ? m13.winner === "player1"
-              ? m13.player1
-              : m13.player2
-            : null;
-        if (lbChampion && winnerPlayer.id === lbChampion.id) {
-          const m15Idx = nextMatches.findIndex((m) => m.id === "m15");
-          if (m15Idx !== -1) {
-            const m15 = {
-              ...nextMatches[m15Idx],
-              player1: updatedMatch.player1,
-              player2: updatedMatch.player2,
-            };
-            nextMatches = nextMatches.slice(0, m15Idx).concat(m15, nextMatches.slice(m15Idx + 1));
-            try {
-              await updateDoc(doc(db, "matches", "m15"), {
-                player1: updatedMatch.player1 ?? null,
-                player2: updatedMatch.player2 ?? null,
-              });
-            } catch (e) {
-              console.error("Error filling M15:", e);
-            }
-          }
-        }
-      }
-
-      // Persist advanced matches to Firebase
-      const updatedIds = new Set<string>();
-      if (adv?.winner) updatedIds.add(adv.winner.nextId);
-      if (adv?.loser) updatedIds.add(adv.loser.nextId);
+    const persistMatches = async (updatedIds: Set<string>) => {
       for (const id of updatedIds) {
         const m = nextMatches.find((x) => x.id === id);
         if (m) {
@@ -476,12 +502,109 @@ const InvitationalPage = () => {
           }
         }
       }
+    };
+
+    if (isCompleted && player1 && player2 && activeTab === "8-double") {
+      const adv = ADVANCEMENT_8_DE[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1 : player2;
+      const loserPlayer = winner === "player1" ? player2 : player1;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      if (adv?.loser) {
+        setNextMatchSlot(adv.loser.nextId, adv.loser.slot, loserPlayer);
+        updatedIds.add(adv.loser.nextId);
+      }
+      if (selectedMatch.id === "8-de-m14") {
+        const m13 = nextMatches.find((m) => m.id === "8-de-m13");
+        const lbChampion =
+          m13?.winner && m13.player1 && m13.player2
+            ? m13.winner === "player1" ? m13.player1 : m13.player2
+            : null;
+        if (lbChampion && winnerPlayer.id === lbChampion.id) {
+          const m15Idx = nextMatches.findIndex((m) => m.id === "8-de-m15");
+          if (m15Idx !== -1) {
+            const m15 = { ...nextMatches[m15Idx], player1: updatedMatch.player1, player2: updatedMatch.player2 };
+            nextMatches = nextMatches.slice(0, m15Idx).concat(m15, nextMatches.slice(m15Idx + 1));
+            try {
+              await updateDoc(doc(db, "matches", "8-de-m15"), {
+                player1: updatedMatch.player1 ?? null,
+                player2: updatedMatch.player2 ?? null,
+              });
+            } catch (e) {
+              console.error("Error filling M15:", e);
+            }
+          }
+        }
+      }
+      await persistMatches(updatedIds);
+    }
+
+    if (isCompleted && player1 && player2 && activeTab === "8-single") {
+      const adv = ADVANCEMENT_8_SE[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1 : player2;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      await persistMatches(updatedIds);
+    }
+
+    if (isCompleted && player1 && player2 && activeTab === "4-double") {
+      const adv = ADVANCEMENT_4_DE[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1 : player2;
+      const loserPlayer = winner === "player1" ? player2 : player1;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      if (adv?.loser) {
+        setNextMatchSlot(adv.loser.nextId, adv.loser.slot, loserPlayer);
+        updatedIds.add(adv.loser.nextId);
+      }
+      if (selectedMatch.id === "4-de-m6") {
+        const m5 = nextMatches.find((m) => m.id === "4-de-m5");
+        const lbChampion = m5?.winner && m5.player1 && m5.player2
+          ? (m5.winner === "player1" ? m5.player1 : m5.player2)
+          : null;
+        if (lbChampion && winnerPlayer.id === lbChampion.id) {
+          const m7Idx = nextMatches.findIndex((m) => m.id === "4-de-m7");
+          if (m7Idx !== -1) {
+            const m7 = { ...nextMatches[m7Idx], player1: updatedMatch.player1, player2: updatedMatch.player2 };
+            nextMatches = nextMatches.slice(0, m7Idx).concat(m7, nextMatches.slice(m7Idx + 1));
+            try {
+              await updateDoc(doc(db, "matches", "4-de-m7"), {
+                player1: updatedMatch.player1 ?? null,
+                player2: updatedMatch.player2 ?? null,
+              });
+            } catch (e) {
+              console.error("Error filling 4-de-m7:", e);
+            }
+          }
+        }
+      }
+      await persistMatches(updatedIds);
+    }
+
+    if (isCompleted && player1 && player2 && activeTab === "4-single") {
+      const adv = ADVANCEMENT_4_SE[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1 : player2;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      await persistMatches(updatedIds);
     }
 
     setMatches(nextMatches);
     setIsModalOpen(false);
     // If tournament just ended, show winner modal with receipt
-    const champ = getTournamentChampion(nextMatches);
+    const champ = getTournamentChampion(nextMatches, activeTab);
     if (champ) setShowTournamentWinnerModal(true);
   };
 
@@ -489,31 +612,58 @@ const InvitationalPage = () => {
     if (!isManager) return;
     setShowResetConfirm(false);
     setShowTournamentWinnerModal(false);
-    await initializeMatches();
+    await initializeMatches(activeTab);
   };
 
-  // Tournament champion: winner of M15, or winner of M14 if WB won (no bracket reset)
-  const getTournamentChampion = useCallback((matchList: Match[]): Player | null => {
-    const m14 = matchList.find((m) => m.id === "m14");
-    const m15 = matchList.find((m) => m.id === "m15");
-    if (m15?.status === "completed" && m15.winner && m15.player1 && m15.player2)
-      return m15.winner === "player1" ? m15.player1 : m15.player2;
-    if (m14?.status === "completed" && m14.winner && m14.player1 && m14.player2) {
-      const m13 = matchList.find((m) => m.id === "m13");
-      const lbChampion =
-        m13?.winner && m13.player1 && m13.player2
-          ? m13.winner === "player1"
-            ? m13.player1
-            : m13.player2
+  const getTournamentChampion = useCallback((matchList: Match[], tab: InvitationalTab): Player | null => {
+    if (tab === "8-double") {
+      const m14 = matchList.find((m) => m.id === "8-de-m14");
+      const m15 = matchList.find((m) => m.id === "8-de-m15");
+      if (m15?.status === "completed" && m15.winner && m15.player1 && m15.player2)
+        return m15.winner === "player1" ? m15.player1 : m15.player2;
+      if (m14?.status === "completed" && m14.winner && m14.player1 && m14.player2) {
+        const m13 = matchList.find((m) => m.id === "8-de-m13");
+        const lbChampion = m13?.winner && m13.player1 && m13.player2
+          ? (m13.winner === "player1" ? m13.player1 : m13.player2)
           : null;
-      const m14Winner = m14.winner === "player1" ? m14.player1 : m14.player2;
-      if (lbChampion && m14Winner.id === lbChampion.id) return null;
-      return m14Winner;
+        const m14Winner = m14.winner === "player1" ? m14.player1 : m14.player2;
+        if (lbChampion && m14Winner.id === lbChampion.id) return null;
+        return m14Winner;
+      }
+      return null;
+    }
+    if (tab === "8-single") {
+      const m7 = matchList.find((m) => m.id === "8-se-m7");
+      if (m7?.status === "completed" && m7.winner && m7.player1 && m7.player2)
+        return m7.winner === "player1" ? m7.player1 : m7.player2;
+      return null;
+    }
+    if (tab === "4-double") {
+      const m7 = matchList.find((m) => m.id === "4-de-m7");
+      const m6 = matchList.find((m) => m.id === "4-de-m6");
+      if (m7?.status === "completed" && m7.winner && m7.player1 && m7.player2)
+        return m7.winner === "player1" ? m7.player1 : m7.player2;
+      if (m6?.status === "completed" && m6.winner && m6.player1 && m6.player2) {
+        const m5 = matchList.find((m) => m.id === "4-de-m5");
+        const lbChampion = m5?.winner && m5.player1 && m5.player2
+          ? (m5.winner === "player1" ? m5.player1 : m5.player2)
+          : null;
+        const m6Winner = m6.winner === "player1" ? m6.player1 : m6.player2;
+        if (lbChampion && m6Winner.id === lbChampion.id) return null; // bracket reset needed
+        return m6Winner;
+      }
+      return null;
+    }
+    if (tab === "4-single") {
+      const m3 = matchList.find((m) => m.id === "4-se-m3");
+      if (m3?.status === "completed" && m3.winner && m3.player1 && m3.player2)
+        return m3.winner === "player1" ? m3.player1 : m3.player2;
+      return null;
     }
     return null;
   }, []);
 
-  const tournamentChampion = getTournamentChampion(matches);
+  const tournamentChampion = getTournamentChampion(matches, activeTab);
 
   if (loading || authLoading) {
     return (
@@ -527,15 +677,35 @@ const InvitationalPage = () => {
     );
   }
 
+  const formatLabel = activeTab === "8-double" ? "8-Player Double Elimination" : activeTab === "8-single" ? "8-Player Single Elimination" : activeTab === "4-double" ? "4-Player Double Elimination" : "4-Player Single Elimination";
+
   return (
     <div className="p-3 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Invitational
-          </h1>
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Invitational</h1>
+          <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-2">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-1.5 rounded-t text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "bg-amber-500 text-amber-950"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <span className="text-sm text-gray-600">{formatLabel}</span>
           <div className="flex items-center gap-2">
-            {tournamentChampion && (
+            {matches.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowTournamentWinnerModal(true)}
@@ -544,13 +714,13 @@ const InvitationalPage = () => {
                 View results
               </button>
             )}
-            {isManager && (
+            {isManager && matches.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(true)}
                 className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
               >
-                Reset tournament
+                Reset bracket
               </button>
             )}
           </div>
@@ -561,15 +731,16 @@ const InvitationalPage = () => {
           onClose={() => setShowTournamentWinnerModal(false)}
           champion={tournamentChampion}
           matches={matches}
+          formatLabel={formatLabel}
         />
 
         {/* Reset confirmation modal */}
         {showResetConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-5 shadow-lg">
-              <p className="text-gray-800 font-medium mb-1">Reset tournament?</p>
+              <p className="text-gray-800 font-medium mb-1">Reset this bracket?</p>
               <p className="text-sm text-gray-600 mb-4">
-                All 15 matches will be cleared. All players will be available to assign again in WB R1.
+                All matches for this format will be cleared. Other tabs are not affected.
               </p>
               <div className="flex gap-2">
                 <button
@@ -591,7 +762,7 @@ const InvitationalPage = () => {
           </div>
         )}
 
-        {/* Main Container: 8-player double elimination (15 matches) */}
+        {activeTab === "8-double" && (
         <div className="flex flex-col space-y-2">
           {/* Winners Bracket: M1–M7 */}
           <div className="w-full">
@@ -606,19 +777,19 @@ const InvitationalPage = () => {
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-gray-800 mb-2">WB R1</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
-                    {["m1", "m2", "m3", "m4"].map((id) => renderMatchBox(id, false))}
+                    {["8-de-m1", "8-de-m2", "8-de-m3", "8-de-m4"].map((id) => renderMatchBox(id, false))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-gray-800 mb-2">WB R2</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
-                    {["m5", "m6"].map((id) => renderMatchBox(id, false))}
+                    {["8-de-m5", "8-de-m6"].map((id) => renderMatchBox(id, false))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-gray-800 mb-2">WB Final</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
-                    {renderMatchBox("m7", false)}
+                    {renderMatchBox("8-de-m7", false)}
                   </div>
                 </div>
               </div>
@@ -640,25 +811,25 @@ const InvitationalPage = () => {
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R1</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
-                    {["m8", "m9"].map((id) => renderMatchBox(id, true))}
+                    {["8-de-m8", "8-de-m9"].map((id) => renderMatchBox(id, true))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R2</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
-                    {["m10", "m11"].map((id) => renderMatchBox(id, true))}
+                    {["8-de-m10", "8-de-m11"].map((id) => renderMatchBox(id, true))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R3</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
-                    {renderMatchBox("m12", true)}
+                    {renderMatchBox("8-de-m12", true)}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-gray-800 mb-2">LB Final</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
-                    {renderMatchBox("m13", true)}
+                    {renderMatchBox("8-de-m13", true)}
                   </div>
                 </div>
               </div>
@@ -677,12 +848,127 @@ const InvitationalPage = () => {
             </div>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 min-w-max pb-2 items-center">
-                {renderMatchBox("m14", false)}
-                {renderMatchBox("m15", false)}
+                {renderMatchBox("8-de-m14", false)}
+                {renderMatchBox("8-de-m15", false)}
               </div>
             </div>
           </div>
         </div>
+        )}
+
+        {/* 8 Single: R1 → Semis → Final */}
+        {activeTab === "8-single" && (
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center mb-2">
+            <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">SE</div>
+            <h2 className="text-lg font-bold text-gray-900">8-Player Single Elimination</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[280px]">
+              <div className="flex flex-col min-h-[200px]">
+                <div className="text-center font-bold text-sm text-gray-800 mb-2">R1</div>
+                <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                  {["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4"].map((id) => renderMatchBox(id, false))}
+                </div>
+              </div>
+              <div className="flex flex-col min-h-[200px]">
+                <div className="text-center font-bold text-sm text-gray-800 mb-2">Semis</div>
+                <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                  {["8-se-m5", "8-se-m6"].map((id) => renderMatchBox(id, false))}
+                </div>
+              </div>
+              <div className="flex flex-col min-h-[200px]">
+                <div className="text-center font-bold text-sm text-gray-800 mb-2">Final</div>
+                <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                  {renderMatchBox("8-se-m7", false)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* 4 Double: WB R1 → WB Final → LB R1 → LB Final → GF → Bracket Reset */}
+        {activeTab === "4-double" && (
+        <div className="flex flex-col space-y-2">
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
+              <h2 className="text-lg font-bold text-gray-900">Winners Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                <div className="flex flex-col">
+                  <div className="text-center font-bold text-sm text-gray-800 mb-2">WB R1</div>
+                  <div className="flex flex-col space-y-1">
+                    {["4-de-m1", "4-de-m2"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <div className="text-center font-bold text-sm text-gray-800 mb-2">WB Final</div>
+                  <div className="flex flex-col space-y-1">{renderMatchBox("4-de-m3", false)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
+              <h2 className="text-lg font-bold text-gray-900">Losers Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                <div className="flex flex-col">
+                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R1</div>
+                  <div className="flex flex-col space-y-1">{renderMatchBox("4-de-m4", true)}</div>
+                </div>
+                <div className="flex flex-col">
+                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB Final</div>
+                  <div className="flex flex-col space-y-1">{renderMatchBox("4-de-m5", true)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
+              <h2 className="text-lg font-bold text-gray-900">Grand Final &amp; Bracket Reset</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("4-de-m6", false)}
+                {renderMatchBox("4-de-m7", false)}
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* 4 Single: Semis → Final */}
+        {activeTab === "4-single" && (
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center mb-2">
+            <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">SE</div>
+            <h2 className="text-lg font-bold text-gray-900">4-Player Single Elimination</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="flex space-x-4 min-w-max pb-2 items-center">
+              <div className="flex flex-col">
+                <div className="text-center font-bold text-sm text-gray-800 mb-2">Semis</div>
+                <div className="flex flex-col space-y-1">
+                  {["4-se-m1", "4-se-m2"].map((id) => renderMatchBox(id, false))}
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <div className="text-center font-bold text-sm text-gray-800 mb-2">Final</div>
+                <div className="flex flex-col space-y-1">{renderMatchBox("4-se-m3", false)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
       </div>
 
       {/* Match Input Modal */}
@@ -702,12 +988,18 @@ const InvitationalPage = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Player selection: editable only in WB R1 (m1–m4); after that show names read-only */}
+              {/* Player selection: editable only in first-round matches per format; after that show names read-only */}
               {(() => {
-                const isFirstRoundWb = selectedMatch && ["m1", "m2", "m3", "m4"].includes(selectedMatch.id);
+                const firstRoundIds: string[] =
+                  activeTab === "8-double" ? ["8-de-m1", "8-de-m2", "8-de-m3", "8-de-m4"]
+                  : activeTab === "8-single" ? ["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4"]
+                  : activeTab === "4-double" ? ["4-de-m1", "4-de-m2"]
+                  : activeTab === "4-single" ? ["4-se-m1", "4-se-m2"]
+                  : [];
+                const isFirstRound = selectedMatch && firstRoundIds.includes(selectedMatch.id);
                 const name1 = players.find((p) => p.id === selectedPlayer1)?.name ?? "Player 1";
                 const name2 = players.find((p) => p.id === selectedPlayer2)?.name ?? "Player 2";
-                if (isFirstRoundWb) {
+                if (isFirstRound) {
                   return (
                     <>
                       <div>

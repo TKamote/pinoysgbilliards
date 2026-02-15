@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navigation from "@/components/Navigation";
+import LayoutWithNav from "@/components/LayoutWithNav";
 import { LiveProvider } from "@/contexts/LiveContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -30,8 +30,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <LiveProvider>
-            <Navigation />
-            <main className="min-h-screen bg-transparent">{children}</main>
+            <LayoutWithNav>{children}</LayoutWithNav>
           </LiveProvider>
         </AuthProvider>
       </body>
