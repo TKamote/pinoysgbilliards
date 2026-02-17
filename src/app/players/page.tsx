@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUsage } from "@/contexts/UsageContext";
 
 interface Player {
   id: string;
@@ -34,6 +35,7 @@ interface Logo {
 
 const PlayersPage = () => {
   const { user } = useAuth();
+  const { showLimitReachedModal } = useUsage();
   const canEditPlayers = !!user;
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,6 +182,10 @@ const PlayersPage = () => {
       setPhotoPreview(null);
       setShowCreateForm(false);
     } catch (error) {
+      if ((error as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+        return;
+      }
       console.error("Error creating player:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -276,6 +282,10 @@ const PlayersPage = () => {
         setPhotoPreview(null);
         setShowCreateForm(false);
       } catch (error) {
+        if ((error as { code?: string })?.code === "permission-denied") {
+          showLimitReachedModal();
+          return;
+        }
         console.error("Error updating player:", error);
         alert("Failed to update player. Please try again.");
       } finally {
@@ -388,6 +398,10 @@ const PlayersPage = () => {
       setShowCreateForm(false);
       alert("Player deleted successfully!");
     } catch (error) {
+      if ((error as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+        return;
+      }
       console.error("Error deleting player:", error);
       alert("Failed to delete player. Please try again.");
     } finally {
@@ -453,6 +467,10 @@ const PlayersPage = () => {
       setNewLogoName("");
       setLogoPreview(null);
     } catch (e) {
+      if ((e as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+        return;
+      }
       console.error("Error saving logo:", e);
       const msg = e instanceof Error ? e.message : "Failed to save logo.";
       alert(`Failed to save logo. ${msg}`);
@@ -471,6 +489,10 @@ const PlayersPage = () => {
         setLogoPreview(null);
       }
     } catch (e) {
+      if ((e as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+        return;
+      }
       console.error("Error deleting logo:", e);
       alert("Failed to delete logo.");
     }

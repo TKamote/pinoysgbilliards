@@ -4,6 +4,7 @@ import "./globals.css";
 import LayoutWithNav from "@/components/LayoutWithNav";
 import { LiveProvider } from "@/contexts/LiveContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { UsageProvider } from "@/contexts/UsageContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,9 +30,11 @@ export default function RootLayout({
         className={`${inter.variable} antialiased`}
       >
         <AuthProvider>
-          <LiveProvider>
-            <LayoutWithNav>{children}</LayoutWithNav>
-          </LiveProvider>
+          <UsageProvider>
+            <LiveProvider>
+              <LayoutWithNav>{children}</LayoutWithNav>
+            </LiveProvider>
+          </UsageProvider>
         </AuthProvider>
       </body>
     </html>

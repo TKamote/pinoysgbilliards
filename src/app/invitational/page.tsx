@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUsage } from "@/contexts/UsageContext";
 import TournamentWinnerModal from "@/components/TournamentWinnerModal";
 
 export type InvitationalTab = "8-double" | "8-single" | "4-double" | "4-single";
@@ -128,6 +129,7 @@ const InvitationalPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { showLimitReachedModal } = useUsage();
   const canEdit = !!user; // Both manager and user roles get full access to Invitational
 
   const activeTab = useMemo((): InvitationalTab => {
@@ -515,6 +517,9 @@ const InvitationalPage = () => {
         { merge: true }
       );
     } catch (error) {
+      if ((error as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+      }
       console.error("Error saving match to Firebase:", error);
       setIsModalOpen(false);
       return;
@@ -539,7 +544,8 @@ const InvitationalPage = () => {
               player2: m.player2 ?? null,
             });
           } catch (e) {
-            console.error(`Error updating match ${id}:`, e);
+            if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+            else console.error(`Error updating match ${id}:`, e);
           }
         }
       }
@@ -575,7 +581,8 @@ const InvitationalPage = () => {
                 player2: updatedMatch.player2 ?? null,
               });
             } catch (e) {
-              console.error("Error filling M15:", e);
+              if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+              else console.error("Error filling M15:", e);
             }
           }
         }
@@ -623,7 +630,8 @@ const InvitationalPage = () => {
                 player2: updatedMatch.player2 ?? null,
               });
             } catch (e) {
-              console.error("Error filling 4-de-m7:", e);
+              if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+              else console.error("Error filling 4-de-m7:", e);
             }
           }
         }

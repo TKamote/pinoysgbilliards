@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useLive, GameMode } from "@/contexts/LiveContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUsage } from "@/contexts/UsageContext";
 import { collection, getDocs, doc, setDoc, getDoc, query, where, documentId, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
@@ -55,6 +56,7 @@ const TourManagerPage = () => {
   const { tourManagerIsLive, setTourManagerIsLive, tourManagerGameMode, setTourManagerGameMode } =
     useLive();
   const { user, loading: authLoading } = useAuth();
+  const { showLimitReachedModal } = useUsage();
   const canEdit = !!user; // Manager and user roles both get full Tour Manager access
 
   // Double-press R for reset tracking
@@ -371,8 +373,10 @@ const TourManagerPage = () => {
         { merge: true }
       );
     } catch (error) {
+      if ((error as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+      }
       console.error("Error saving match data:", error);
-      // Silently fail if not authenticated
     }
   };
 
@@ -394,6 +398,9 @@ const TourManagerPage = () => {
         { merge: true }
       );
     } catch (error) {
+      if ((error as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+      }
       console.error("Error saving player 1:", error);
     }
   };
@@ -415,6 +422,9 @@ const TourManagerPage = () => {
         { merge: true }
       );
     } catch (error) {
+      if ((error as { code?: string })?.code === "permission-denied") {
+        showLimitReachedModal();
+      }
       console.error("Error saving player 2:", error);
     }
   };
@@ -538,7 +548,8 @@ const TourManagerPage = () => {
               { raceTo: newValue, updatedAt: new Date().toISOString() },
               { merge: true }
             ).catch((error) => {
-              console.error("Error saving raceTo:", error);
+              if ((error as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+              else console.error("Error saving raceTo:", error);
             });
           }
           return newValue;
@@ -559,7 +570,8 @@ const TourManagerPage = () => {
               { raceTo: newValue, updatedAt: new Date().toISOString() },
               { merge: true }
             ).catch((error) => {
-              console.error("Error saving raceTo:", error);
+              if ((error as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+              else console.error("Error saving raceTo:", error);
             });
           }
           return newValue;
