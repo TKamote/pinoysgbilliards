@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   collection,
@@ -1176,4 +1176,10 @@ const InvitationalPage = () => {
   );
 };
 
-export default InvitationalPage;
+export default function InvitationalPageWithSuspense() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-600">Loading...</div>}>
+      <InvitationalPage />
+    </Suspense>
+  );
+}
