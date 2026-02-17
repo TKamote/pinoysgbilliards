@@ -663,8 +663,8 @@ const TourManagerPage = () => {
 
         {/* Two logos - Top Left, stacked vertically; pick from Players tab logos */}
         <div
-          className="absolute flex flex-col gap-2 z-10 items-start"
-          style={{ top: "80px", left: "30px" }}
+          className="absolute flex gap-2 z-10 items-start"
+          style={{ top: "80px", left: "30px", flexDirection: "column" }}
         >
           <button
             type="button"
