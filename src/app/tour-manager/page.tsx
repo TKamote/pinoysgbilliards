@@ -54,7 +54,8 @@ const TourManagerPage = () => {
   const [bracketRows, setBracketRows] = useState<{ id: string; player1Name: string; player2Name: string; score1: number; score2: number }[]>([]);
   const { tourManagerIsLive, setTourManagerIsLive, tourManagerGameMode, setTourManagerGameMode } =
     useLive();
-  const { isManager, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const canEdit = !!user; // Manager and user roles both get full Tour Manager access
 
   // Double-press R for reset tracking
   const lastResetPress = useRef<number>(0);
@@ -345,7 +346,7 @@ const TourManagerPage = () => {
 
   // Save match data to Firestore (scores and turn)
   const saveMatchData = async () => {
-    if (!isManager) {
+    if (!canEdit) {
       return;
     }
     try {
@@ -377,7 +378,7 @@ const TourManagerPage = () => {
 
   // Handle player selection
   const handlePlayer1Select = async (selectedPlayer: Player) => {
-    if (!isManager) return;
+    if (!canEdit) return;
     setPlayer1(selectedPlayer);
     // Save to Firestore with all player data
     try {
@@ -398,7 +399,7 @@ const TourManagerPage = () => {
   };
 
   const handlePlayer2Select = async (selectedPlayer: Player) => {
-    if (!isManager) return;
+    if (!canEdit) return;
     setPlayer2(selectedPlayer);
     // Save to Firestore with all player data
     try {
@@ -530,7 +531,7 @@ const TourManagerPage = () => {
         setRaceTo((prev) => {
           const newValue = Math.max(1, prev - 1);
           // Save immediately to Firestore
-          if (isManager && !loading) {
+          if (canEdit && !loading) {
             const matchDocRef = doc(db, "current_match", TOUR_MANAGER_MATCH_ID);
             setDoc(
               matchDocRef,
@@ -551,7 +552,7 @@ const TourManagerPage = () => {
         setRaceTo((prev) => {
           const newValue = Math.min(50, prev + 1);
           // Save immediately to Firestore
-          if (isManager && !loading) {
+          if (canEdit && !loading) {
             const matchDocRef = doc(db, "current_match", TOUR_MANAGER_MATCH_ID);
             setDoc(
               matchDocRef,
@@ -646,22 +647,10 @@ const TourManagerPage = () => {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isManager, tourManagerIsLive, tourManagerGameMode, handleResetBalls, loading, showWinnerModal, handleWinnerModalClose]);
+  }, [canEdit, tourManagerIsLive, tourManagerGameMode, handleResetBalls, loading, showWinnerModal, handleWinnerModalClose]);
 
   // Determine if player selection should be enabled
-  const canSelectPlayers = isManager && !tourManagerIsLive;
-
-  // Manager-only: redirect non-managers
-  if (!authLoading && !isManager) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <p className="text-lg font-medium text-gray-800">Tour Manager is for managers only.</p>
-          <a href="/home" className="mt-4 inline-block text-blue-600 hover:underline">Go to Home</a>
-        </div>
-      </div>
-    );
-  }
+  const canSelectPlayers = canEdit && !tourManagerIsLive;
 
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
@@ -819,7 +808,7 @@ const TourManagerPage = () => {
           <div
             className="flex items-center justify-center bg-linear-to-r from-indigo-900 to-indigo-800 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4"
           >
-            {showRaceToInput && isManager ? (
+            {showRaceToInput && canEdit ? (
               <div className="flex items-center space-x-1">
                 <input
                   type="number"
@@ -843,18 +832,18 @@ const TourManagerPage = () => {
             ) : (
               <button
                 onClick={() => {
-                  if (isManager) {
+                  if (canEdit) {
                     setShowRaceToInput(true);
                     setTempRaceTo(raceTo.toString());
                   }
                 }}
                 className={`text-xs sm:text-sm md:text-base lg:text-xl xl:text-2xl font-bold text-white ${
-                  isManager
+                  canEdit
                     ? "cursor-pointer hover:opacity-80 underline"
                     : "cursor-default"
                 }`}
-                disabled={!isManager}
-                title={isManager ? "Click to edit" : ""}
+                disabled={!canEdit}
+                title={canEdit ? "Click to edit" : ""}
               >
                 Race {raceTo}
               </button>

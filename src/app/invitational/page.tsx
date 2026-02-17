@@ -127,7 +127,8 @@ const ROUND_LABEL_4_SE: Record<string, string> = {
 const InvitationalPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isManager, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const canEdit = !!user; // Both manager and user roles get full access to Invitational
 
   const activeTab = useMemo((): InvitationalTab => {
     const t = searchParams.get("tab");
@@ -220,7 +221,6 @@ const InvitationalPage = () => {
     if (authLoading) return; // Wait for auth to load
 
     console.log("useEffect triggered - loading data...");
-    console.log("Is Manager:", isManager);
     const loadData = async () => {
       try {
         console.log("Loading players from Firebase...");
@@ -258,7 +258,7 @@ const InvitationalPage = () => {
             };
           });
           const hasAny = raw.some((m) => ids.includes(m.id));
-          if (!hasAny && isManager) {
+          if (!hasAny && canEdit) {
             console.log(`No ${activeTab} matches, initializing...`);
             await initializeMatches(activeTab);
           } else {
@@ -276,13 +276,13 @@ const InvitationalPage = () => {
     };
 
     loadData();
-  }, [initializeMatches, isManager, authLoading, activeTab, getMatchIdsForTab, getRoundLabel, getBracketForTab]);
+  }, [initializeMatches, canEdit, authLoading, activeTab, getMatchIdsForTab, getRoundLabel, getBracketForTab]);
 
   useEffect(() => {
     if (authLoading || loading) return;
 
     const checkAndInitialize = async () => {
-      if (!isManager) return;
+      if (!canEdit) return;
       const ids = getMatchIdsForTab(activeTab);
       if (ids.length === 0) return;
       try {
@@ -298,12 +298,12 @@ const InvitationalPage = () => {
     };
 
     checkAndInitialize();
-  }, [isManager, authLoading, loading, activeTab, matches.length, players.length, initializeMatches, getMatchIdsForTab]);
+  }, [canEdit, authLoading, loading, activeTab, matches.length, players.length, initializeMatches, getMatchIdsForTab]);
 
   // Handle match click
   const handleMatchClick = (matchId: string) => {
-    if (!isManager) {
-      alert("Please log in as a manager to edit matches.");
+    if (!canEdit) {
+      alert("Please log in to edit matches.");
       return;
     }
     const match = matches.find((m) => m.id === matchId);
@@ -460,8 +460,8 @@ const InvitationalPage = () => {
   const handleSaveMatch = async () => {
     if (!selectedMatch) return;
 
-    if (!isManager) {
-      alert("Only managers can update matches. Please log in.");
+    if (!canEdit) {
+      alert("Please log in to update matches.");
       return;
     }
 
@@ -655,7 +655,7 @@ const InvitationalPage = () => {
   };
 
   const handleResetTournament = async () => {
-    if (!isManager) return;
+    if (!canEdit) return;
     setShowResetConfirm(false);
     setShowTournamentWinnerModal(false);
     await initializeMatches(activeTab);
@@ -760,7 +760,7 @@ const InvitationalPage = () => {
                 View results
               </button>
             )}
-            {isManager && matches.length > 0 && (
+            {canEdit && matches.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(true)}
@@ -981,7 +981,7 @@ const InvitationalPage = () => {
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
               <h2 className="text-lg font-bold text-gray-900">Grand Final &amp; Bracket Reset</h2>
-              {isManager && (
+              {canEdit && (
                 <button
                   type="button"
                   onClick={handleUpdateTourManager}

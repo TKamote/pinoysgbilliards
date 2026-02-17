@@ -17,6 +17,7 @@ const allOverlayLinks = [
 const userOverlayLinks = [
   { name: "Pinoy Sargo", href: "/pbs-tour-2" },
   { name: "Arys", href: "/arys" },
+  { name: "Tour Manager-4", href: "/tour-manager" },
 ];
 
 const HomePage = () => {
@@ -39,26 +40,28 @@ const HomePage = () => {
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Overlays
-          </h2>
-          <p className="text-gray-600 text-sm mb-4">
-            Open an overlay to use in OBS or on another device.
-          </p>
-          <ul className="space-y-2">
-            {overlayLinks.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="block w-full text-left px-4 py-3 rounded-lg bg-gray-50 hover:bg-blue-50 text-blue-700 hover:text-blue-800 font-medium transition-colors border border-gray-200 hover:border-blue-200"
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {overlayLinks.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Overlays
+            </h2>
+            <p className="text-gray-600 text-sm mb-4">
+              Open an overlay to use in OBS or on another device.
+            </p>
+            <ul className="space-y-2">
+              {overlayLinks.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="block w-full text-left px-4 py-3 rounded-lg bg-gray-50 hover:bg-blue-50 text-blue-700 hover:text-blue-800 font-medium transition-colors border border-gray-200 hover:border-blue-200"
+                  >
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
