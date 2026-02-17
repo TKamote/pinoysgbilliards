@@ -7,7 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
+import LogoSelectionModal, { type Logo } from "@/components/LogoSelectionModal";
 import WinnerModal from "@/components/WinnerModal";
+
+const DEFAULT_LOGO = "/PSGB_Logo.png";
+const LIVE_MATCH_CONFIG_ID = "live-match";
 
 interface Player {
   id: string;
@@ -39,6 +43,9 @@ const LiveMatchPage = () => {
   const [tempRaceTo, setTempRaceTo] = useState("7");
   const [team1Score, setTeam1Score] = useState(0);
   const [team2Score, setTeam2Score] = useState(0);
+  const [logo1URL, setLogo1URL] = useState<string>(DEFAULT_LOGO);
+  const [logos, setLogos] = useState<Logo[]>([]);
+  const [showLogo1Modal, setShowLogo1Modal] = useState(false);
   const { isLive, setIsLive, gameMode, setGameMode } = useLive();
   const { isManager } = useAuth();
 
@@ -179,6 +186,41 @@ const LiveMatchPage = () => {
 
     fetchPlayers();
   }, []);
+
+  useEffect(() => {
+    const loadLogoConfig = async () => {
+      try {
+        const configRef = doc(db, "config", LIVE_MATCH_CONFIG_ID);
+        const snap = await getDoc(configRef);
+        if (snap.exists() && snap.data()?.logo1URL) setLogo1URL(snap.data()!.logo1URL);
+      } catch (e) {
+        console.error("Error loading logo config:", e);
+      }
+    };
+    loadLogoConfig();
+  }, []);
+
+  useEffect(() => {
+    const fetchLogos = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "logos"));
+        const list = snapshot.docs.map((d) => {
+          const data = d.data();
+          return { id: d.id, name: (data.name ?? "") as string, logoURL: (data.logoURL ?? "") as string };
+        });
+        setLogos(list.sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (e) {
+        console.error("Error fetching logos:", e);
+      }
+    };
+    fetchLogos();
+  }, []);
+
+  const handleSelectLogo = (logo: Logo) => {
+    const url = logo.logoURL || "";
+    setLogo1URL(url);
+    setDoc(doc(db, "config", LIVE_MATCH_CONFIG_ID), { logo1URL: url }, { merge: true }).catch(console.error);
+  };
 
   // Load persisted match data from Firestore
   useEffect(() => {
@@ -966,18 +1008,27 @@ const LiveMatchPage = () => {
           </div>
         </div>
 
-        {/* Logo - Top Left Corner */}
-        <div className="absolute z-10" style={{ top: "100px", left: "30px" }}>
-          <Image
-            src="/Owen.png"
-            alt="Owen Logo"
-            width={150}
-            height={0}
-            className="bg-white"
-            style={{ width: "150px", height: "auto", borderRadius: "20%" }}
-            unoptimized
-          />
-        </div>
+        {/* Logo - Top Left Corner; pick from Players tab */}
+        <button
+          type="button"
+          onClick={() => canSelectPlayers && setShowLogo1Modal(true)}
+          className={`absolute z-10 text-left ${canSelectPlayers ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
+          style={{ top: "100px", left: "30px" }}
+          title={canSelectPlayers ? "Pick logo from Players tab" : ""}
+        >
+          <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-[50%] overflow-hidden border-2 border-white bg-white shadow flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo1URL || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        </button>
+        <LogoSelectionModal
+          isOpen={showLogo1Modal}
+          onClose={() => setShowLogo1Modal(false)}
+          logos={logos}
+          selectedLogoURL={logo1URL || null}
+          onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }}
+          title="Select Logo"
+        />
 
         {/* Players Scoring Container - Bottom - 70% width on desktop for YouTube Shorts margin */}
         <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">

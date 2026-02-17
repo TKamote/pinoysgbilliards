@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useLive, GameMode } from "@/contexts/LiveContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, query, where, documentId, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import LogoSelectionModal, { type Logo } from "@/components/LogoSelectionModal";
@@ -20,6 +20,14 @@ interface Player {
 const TOUR_MANAGER_MATCH_ID = "tour-manager";
 const TOUR_MANAGER_CONFIG_ID = "tour-manager";
 const DEFAULT_LOGO = "/PSGB_Logo.png";
+
+// 4-doubles match IDs in progression / play order (no M1/M2 labels in UI)
+const FOUR_DE_MATCH_IDS = ["4-de-m1", "4-de-m2", "4-de-m3", "4-de-m4", "4-de-m5", "4-de-m6", "4-de-m7"] as const;
+// Round headers per match (from Invitational 4 Double bracket)
+const FOUR_DE_ROUND_LABELS: Record<string, string> = {
+  "4-de-m1": "WB R1", "4-de-m2": "WB R1", "4-de-m3": "WB Final",
+  "4-de-m4": "LB R1", "4-de-m5": "LB Final", "4-de-m6": "Grand Final", "4-de-m7": "Bracket Reset",
+};
 
 const TourManagerPage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -43,6 +51,7 @@ const TourManagerPage = () => {
   const [tempRaceTo, setTempRaceTo] = useState("7");
   const [logo1URL, setLogo1URL] = useState<string>(DEFAULT_LOGO);
   const [logo2URL, setLogo2URL] = useState<string>(DEFAULT_LOGO);
+  const [bracketRows, setBracketRows] = useState<{ id: string; player1Name: string; player2Name: string; score1: number; score2: number }[]>([]);
   const { tourManagerIsLive, setTourManagerIsLive, tourManagerGameMode, setTourManagerGameMode } =
     useLive();
   const { isManager, loading: authLoading } = useAuth();
@@ -193,7 +202,7 @@ const TourManagerPage = () => {
     fetchPlayers();
   }, []);
 
-  // Load persisted match data from Firestore
+  // Load persisted match data from Firestore (one-time on mount + when players load, like original)
   useEffect(() => {
     const loadMatchData = async () => {
       try {
@@ -203,86 +212,68 @@ const TourManagerPage = () => {
         if (matchDoc.exists()) {
           const matchData = matchDoc.data();
 
-          // Restore player 1 - try to find in players array first, otherwise use saved data
-          if (matchData.player1Id) {
-            if (players.length > 0) {
-              const p1 = players.find((p) => p.id === matchData.player1Id);
-              if (p1) {
-                setPlayer1(p1);
-              } else if (matchData.player1Name) {
-                // Fallback: create player object from saved data
-                setPlayer1({
-                  id: matchData.player1Id,
-                  name: matchData.player1Name,
-                  photoURL: matchData.player1PhotoURL || "",
-                  points: 0,
-                });
-              }
-            } else if (matchData.player1Name) {
-              // Players not loaded yet, use saved data
+          // Restore player 1 - by id first, then by name (e.g. "TBD" from Invitational when id empty)
+          const p1Id = matchData.player1Id;
+          const p1Name = matchData.player1Name;
+          if (p1Id && players.length > 0) {
+            const p1 = players.find((p) => p.id === p1Id);
+            if (p1) {
+              setPlayer1(p1);
+            } else if (p1Name != null && p1Name !== "") {
               setPlayer1({
-                id: matchData.player1Id,
-                name: matchData.player1Name,
+                id: p1Id,
+                name: p1Name,
                 photoURL: matchData.player1PhotoURL || "",
                 points: 0,
               });
             }
+          } else if (p1Name != null && p1Name !== "") {
+            setPlayer1({
+              id: p1Id || "tour-manager-p1",
+              name: p1Name,
+              photoURL: matchData.player1PhotoURL || "",
+              points: 0,
+            });
           }
 
-          // Restore player 2 - try to find in players array first, otherwise use saved data
-          if (matchData.player2Id) {
-            if (players.length > 0) {
-              const p2 = players.find((p) => p.id === matchData.player2Id);
-              if (p2) {
-                setPlayer2(p2);
-              } else if (matchData.player2Name) {
-                // Fallback: create player object from saved data
-                setPlayer2({
-                  id: matchData.player2Id,
-                  name: matchData.player2Name,
-                  photoURL: matchData.player2PhotoURL || "",
-                  points: 0,
-                });
-              }
-            } else if (matchData.player2Name) {
-              // Players not loaded yet, use saved data
+          // Restore player 2 - by id first, then by name
+          const p2Id = matchData.player2Id;
+          const p2Name = matchData.player2Name;
+          if (p2Id && players.length > 0) {
+            const p2 = players.find((p) => p.id === p2Id);
+            if (p2) {
+              setPlayer2(p2);
+            } else if (p2Name != null && p2Name !== "") {
               setPlayer2({
-                id: matchData.player2Id,
-                name: matchData.player2Name,
+                id: p2Id,
+                name: p2Name,
                 photoURL: matchData.player2PhotoURL || "",
                 points: 0,
               });
             }
+          } else if (p2Name != null && p2Name !== "") {
+            setPlayer2({
+              id: p2Id || "tour-manager-p2",
+              name: p2Name,
+              photoURL: matchData.player2PhotoURL || "",
+              points: 0,
+            });
           }
 
-          // Restore scores
-          if (matchData.player1Score !== undefined) {
-            setPlayer1Score(matchData.player1Score);
-          }
-          if (matchData.player2Score !== undefined) {
-            setPlayer2Score(matchData.player2Score);
-          }
-
-          // Restore pocketed balls
-          if (
-            matchData.pocketedBalls &&
-            Array.isArray(matchData.pocketedBalls)
-          ) {
+          if (matchData.player1Score !== undefined) setPlayer1Score(matchData.player1Score);
+          if (matchData.player2Score !== undefined) setPlayer2Score(matchData.player2Score);
+          if (matchData.pocketedBalls && Array.isArray(matchData.pocketedBalls)) {
             setPocketedBalls(new Set(matchData.pocketedBalls));
           }
-
-          // Restore game mode
           if (
             matchData.gameMode &&
             ["9-ball", "10-ball", "15-ball"].includes(matchData.gameMode)
           ) {
             setTourManagerGameMode(matchData.gameMode as GameMode);
           }
-
-          // Restore raceTo
           if (matchData.raceTo !== undefined && typeof matchData.raceTo === "number") {
             setRaceTo(matchData.raceTo);
-            setTempRaceTo(matchData.raceTo.toString());
+            setTempRaceTo(String(matchData.raceTo));
           }
         }
       } catch (error) {
@@ -292,9 +283,37 @@ const TourManagerPage = () => {
       }
     };
 
-    // Load match data (will use saved photoURLs if players not loaded yet)
     loadMatchData();
   }, [players, setTourManagerGameMode]);
+
+  // Subscribe to 4-doubles matches for bracket column (progression order, line by line)
+  useEffect(() => {
+    const q = query(
+      collection(db, "matches"),
+      where(documentId(), "in", [...FOUR_DE_MATCH_IDS])
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const byId: Record<string, { player1Name: string; player2Name: string; score1: number; score2: number }> = {};
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        byId[d.id] = {
+          player1Name: (data.player1?.name ?? data.player1Name) ?? "TBD",
+          player2Name: (data.player2?.name ?? data.player2Name) ?? "TBD",
+          score1: data.score1 ?? 0,
+          score2: data.score2 ?? 0,
+        };
+      });
+      const rows = FOUR_DE_MATCH_IDS.map((id) => ({
+        id,
+        player1Name: byId[id]?.player1Name ?? "TBD",
+        player2Name: byId[id]?.player2Name ?? "TBD",
+        score1: byId[id]?.score1 ?? 0,
+        score2: byId[id]?.score2 ?? 0,
+      }));
+      setBracketRows(rows);
+    }, (err) => console.error("Bracket matches listener:", err));
+    return () => unsub();
+  }, []);
 
   // Update player objects when players array loads (to get fresh data including updated photos)
   useEffect(() => {
@@ -648,7 +667,7 @@ const TourManagerPage = () => {
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
       <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
         {/* Live Button - Top Right Corner */}
-        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10 flex flex-col items-end gap-2">
           <button
             onClick={() => setTourManagerIsLive(!tourManagerIsLive)}
             className={`text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 ${
@@ -659,6 +678,21 @@ const TourManagerPage = () => {
           >
             {tourManagerIsLive ? "LIVE" : "GO LIVE"}
           </button>
+          {/* 4-doubles bracket: one column, progression order, header per match (WB R1, LB Final, etc.) */}
+          <div className="bg-black/70 text-white rounded-lg px-2 py-1.5 text-xs sm:text-sm max-h-[50vh] overflow-y-auto min-w-[140px] sm:min-w-[180px]">
+            {bracketRows.map((row) => (
+              <div key={row.id} className="border-b border-white/20 last:border-0 py-0.5">
+                <div className="text-[10px] sm:text-xs text-amber-300/90 font-medium mb-0.5">
+                  {FOUR_DE_ROUND_LABELS[row.id] ?? ""}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate shrink min-w-0">{row.player1Name}</span>
+                  <span className="shrink-0 font-mono">{row.score1} – {row.score2}</span>
+                  <span className="truncate shrink min-w-0 text-right">{row.player2Name}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Two logos - Top Left, stacked vertically; pick from Players tab logos */}

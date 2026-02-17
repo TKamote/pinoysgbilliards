@@ -7,7 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
+import LogoSelectionModal, { type Logo } from "@/components/LogoSelectionModal";
 import WinnerModal from "@/components/WinnerModal";
+
+const DEFAULT_LOGO = "/PSGB_Logo.png";
+const THREE_PLAYERS_CONFIG_ID = "3-players";
 
 interface Player {
   id: string;
@@ -36,6 +40,9 @@ const ThreePlayersPage = () => {
   const [winner, setWinner] = useState<Player | null>(null);
   const [showRaceToInput, setShowRaceToInput] = useState(false);
   const [tempRaceTo, setTempRaceTo] = useState("7");
+  const [logo1URL, setLogo1URL] = useState<string>(DEFAULT_LOGO);
+  const [logos, setLogos] = useState<Logo[]>([]);
+  const [showLogo1Modal, setShowLogo1Modal] = useState(false);
   const { threePlayersIsLive, setThreePlayersIsLive, threePlayersGameMode, setThreePlayersGameMode } =
     useLive();
   const { isManager } = useAuth();
@@ -158,6 +165,41 @@ const ThreePlayersPage = () => {
 
     fetchPlayers();
   }, []);
+
+  useEffect(() => {
+    const loadLogoConfig = async () => {
+      try {
+        const configRef = doc(db, "config", THREE_PLAYERS_CONFIG_ID);
+        const snap = await getDoc(configRef);
+        if (snap.exists() && snap.data()?.logo1URL) setLogo1URL(snap.data()!.logo1URL);
+      } catch (e) {
+        console.error("Error loading logo config:", e);
+      }
+    };
+    loadLogoConfig();
+  }, []);
+
+  useEffect(() => {
+    const fetchLogos = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "logos"));
+        const list = snapshot.docs.map((d) => {
+          const data = d.data();
+          return { id: d.id, name: (data.name ?? "") as string, logoURL: (data.logoURL ?? "") as string };
+        });
+        setLogos(list.sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (e) {
+        console.error("Error fetching logos:", e);
+      }
+    };
+    fetchLogos();
+  }, []);
+
+  const handleSelectLogo = (logo: Logo) => {
+    const url = logo.logoURL || "";
+    setLogo1URL(url);
+    setDoc(doc(db, "config", THREE_PLAYERS_CONFIG_ID), { logo1URL: url }, { merge: true }).catch(console.error);
+  };
 
   // Load persisted match data from Firestore
   useEffect(() => {
@@ -632,18 +674,14 @@ const ThreePlayersPage = () => {
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
       <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
-        {/* Logo - Top Left Corner */}
-        <div className="absolute top-4 left-4 z-10">
-          <Image
-            src="/PSGB_Logo.png"
-            alt="PSGB Logo"
-            width={150}
-            height={150}
-            className="rounded-full"
-            style={{ borderRadius: "50%" }}
-            unoptimized
-          />
-        </div>
+        {/* Logo - Top Left; pick from Players tab */}
+        <button type="button" onClick={() => canSelectPlayers && setShowLogo1Modal(true)} className={`absolute top-4 left-4 z-10 text-left ${canSelectPlayers ? "cursor-pointer hover:opacity-90" : "cursor-default"}`} title={canSelectPlayers ? "Pick logo from Players tab" : ""}>
+          <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-[50%] overflow-hidden border-2 border-white bg-white shadow flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo1URL || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        </button>
+        <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }} title="Select Logo" />
 
         {/* Live Button - Top Right Corner */}
         <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">

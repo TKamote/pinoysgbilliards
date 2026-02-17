@@ -21,6 +21,8 @@ const TABS: { id: InvitationalTab; label: string }[] = [
   { id: "4-single", label: "4 Single" },
 ];
 const DEFAULT_TAB: InvitationalTab = "8-double";
+const TOUR_MANAGER_MATCH_ID = "tour-manager";
+const FOUR_DOUBLE_GRAND_FINAL_ID = "4-de-m6";
 
 // Types
 interface Player {
@@ -323,6 +325,45 @@ const InvitationalPage = () => {
     return matches.find((m) => m.id === matchId);
   };
 
+  // Sync 4 Double Grand Final (4-de-m6) to Tour Manager overlay (allows missing players)
+  const syncM6ToTourManager = async (m6: Match | undefined) => {
+    try {
+      await setDoc(
+        doc(db, "current_match", TOUR_MANAGER_MATCH_ID),
+        {
+          player1Id: m6?.player1?.id ?? "",
+          player2Id: m6?.player2?.id ?? "",
+          player1Name: m6?.player1?.name ?? "TBD",
+          player2Name: m6?.player2?.name ?? "TBD",
+          player1PhotoURL: m6?.player1?.photoURL ?? "",
+          player2PhotoURL: m6?.player2?.photoURL ?? "",
+          player1Score: m6?.score1 ?? 0,
+          player2Score: m6?.score2 ?? 0,
+          raceTo: m6?.raceTo ?? 9,
+          currentTurn: null,
+          pocketedBalls: [],
+          gameMode: "9-ball",
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (e) {
+      console.error("Error syncing Tour Manager:", e);
+      throw e;
+    }
+  };
+
+  const handleUpdateTourManager = async () => {
+    if (activeTab !== "4-double") return;
+    const m6 = matches.find((m) => m.id === FOUR_DOUBLE_GRAND_FINAL_ID);
+    try {
+      await syncM6ToTourManager(m6);
+      alert("Tour Manager updated with Grand Final match.");
+    } catch {
+      alert("Failed to update Tour Manager. Check console.");
+    }
+  };
+
   // Score increment: cap at raceTo; if this point would win, show confirmation first
   const handleIncrementScore1 = () => {
     if (score1 >= raceTo) return;
@@ -603,6 +644,11 @@ const InvitationalPage = () => {
 
     setMatches(nextMatches);
     setIsModalOpen(false);
+    // Auto-sync 4 Double Grand Final to Tour Manager whenever matches are saved (including advancement)
+    if (activeTab === "4-double") {
+      const m6 = nextMatches.find((m) => m.id === FOUR_DOUBLE_GRAND_FINAL_ID);
+      syncM6ToTourManager(m6).catch((e) => console.error("Auto-sync Tour Manager:", e));
+    }
     // If tournament just ended, show winner modal with receipt
     const champ = getTournamentChampion(nextMatches, activeTab);
     if (champ) setShowTournamentWinnerModal(true);
@@ -932,9 +978,19 @@ const InvitationalPage = () => {
           </div>
           <div className="border-t-2 border-gray-300 my-2" />
           <div className="w-full">
-            <div className="flex items-center mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
               <h2 className="text-lg font-bold text-gray-900">Grand Final &amp; Bracket Reset</h2>
+              {isManager && (
+                <button
+                  type="button"
+                  onClick={handleUpdateTourManager}
+                  className="bg-red-900 hover:bg-red-800 text-white font-semibold px-3 py-1.5 rounded-lg border-2 border-red-950 shadow-md transition-colors"
+                  title="Push Grand Final (M6) to Tour Manager-4 overlay"
+                >
+                  Update Tour Manager
+                </button>
+              )}
             </div>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 min-w-max pb-2 items-center">

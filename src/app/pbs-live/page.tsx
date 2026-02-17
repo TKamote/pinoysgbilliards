@@ -7,7 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
+import LogoSelectionModal, { type Logo } from "@/components/LogoSelectionModal";
 import WinnerModal from "@/components/WinnerModal";
+
+const DEFAULT_LOGO = "/PSGB_Logo.png";
+const PBS_LIVE_CONFIG_ID = "pbs-live";
 
 interface Player {
   id: string;
@@ -33,6 +37,13 @@ const PbsLivePage = () => {
   const [winner, setWinner] = useState<Player | null>(null);
   const [showRaceToInput, setShowRaceToInput] = useState(false);
   const [tempRaceTo, setTempRaceTo] = useState("7");
+  const [logo1URL, setLogo1URL] = useState<string>(DEFAULT_LOGO);
+  const [logo2URL, setLogo2URL] = useState<string>(DEFAULT_LOGO);
+  const [logo3URL, setLogo3URL] = useState<string>(DEFAULT_LOGO);
+  const [logos, setLogos] = useState<Logo[]>([]);
+  const [showLogo1Modal, setShowLogo1Modal] = useState(false);
+  const [showLogo2Modal, setShowLogo2Modal] = useState(false);
+  const [showLogo3Modal, setShowLogo3Modal] = useState(false);
   const { pbsLiveIsLive, setPbsLiveIsLive, pbsGameMode, setPbsGameMode } =
     useLive();
   const { isManager } = useAuth();
@@ -139,6 +150,50 @@ const PbsLivePage = () => {
 
     fetchPlayers();
   }, []);
+
+  useEffect(() => {
+    const loadLogoConfig = async () => {
+      try {
+        const configRef = doc(db, "config", PBS_LIVE_CONFIG_ID);
+        const snap = await getDoc(configRef);
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d?.logo1URL) setLogo1URL(d.logo1URL);
+          if (d?.logo2URL) setLogo2URL(d.logo2URL);
+          if (d?.logo3URL) setLogo3URL(d.logo3URL);
+        }
+      } catch (e) {
+        console.error("Error loading logo config:", e);
+      }
+    };
+    loadLogoConfig();
+  }, []);
+
+  useEffect(() => {
+    const fetchLogos = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "logos"));
+        const list = snapshot.docs.map((d) => {
+          const data = d.data();
+          return { id: d.id, name: (data.name ?? "") as string, logoURL: (data.logoURL ?? "") as string };
+        });
+        setLogos(list.sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (e) {
+        console.error("Error fetching logos:", e);
+      }
+    };
+    fetchLogos();
+  }, []);
+
+  const handleSelectLogo = (slot: 1 | 2 | 3, logo: Logo) => {
+    const url = logo.logoURL || "";
+    if (slot === 1) setLogo1URL(url);
+    else if (slot === 2) setLogo2URL(url);
+    else setLogo3URL(url);
+    const configRef = doc(db, "config", PBS_LIVE_CONFIG_ID);
+    const key = slot === 1 ? "logo1URL" : slot === 2 ? "logo2URL" : "logo3URL";
+    setDoc(configRef, { [key]: url }, { merge: true }).catch(console.error);
+  };
 
   // Load persisted match data from Firestore
   useEffect(() => {
@@ -596,41 +651,29 @@ const PbsLivePage = () => {
           </button>
         </div>
 
-        {/* Logos - Top Left Corner, Stacked Vertically */}
+        {/* Logos - Top Left Corner, stacked vertically; pick from Players tab */}
         <div
-          className="absolute flex flex-col z-10 items-start"
-          style={{ top: "80px", left: "30px" }}
+          className="absolute flex gap-2 z-10 items-start"
+          style={{ top: "80px", left: "30px", flexDirection: "column" }}
         >
-          <Image
-            src="/PBS.png"
-            alt="PBS Logo"
-            width={150}
-            height={0}
-            className="bg-white"
-            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
-            unoptimized
-          />
-          <div style={{ height: "20px" }} />
-          <Image
-            src="/Owen.png"
-            alt="Owen Logo"
-            width={150}
-            height={0}
-            className="bg-white"
-            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
-            unoptimized
-          />
-          <div style={{ height: "20px" }} />
-          <Image
-            src="/Asa.png"
-            alt="Asa Logo"
-            width={150}
-            height={0}
-            className="bg-white"
-            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
-            unoptimized
-          />
+          {([1, 2, 3] as const).map((slot) => (
+            <button
+              key={slot}
+              type="button"
+              onClick={() => canSelectPlayers && (slot === 1 ? setShowLogo1Modal(true) : slot === 2 ? setShowLogo2Modal(true) : setShowLogo3Modal(true))}
+              className={`text-left ${canSelectPlayers ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
+              title={canSelectPlayers ? "Pick logo from Players tab" : ""}
+            >
+              <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-[50%] overflow-hidden border-2 border-white bg-white shadow flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={(slot === 1 ? logo1URL : slot === 2 ? logo2URL : logo3URL) || DEFAULT_LOGO} alt={`Logo ${slot}`} className="w-full h-full object-contain" />
+              </div>
+            </button>
+          ))}
         </div>
+        <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(1, logo); setShowLogo1Modal(false); }} title="Select Logo 1" />
+        <LogoSelectionModal isOpen={showLogo2Modal} onClose={() => setShowLogo2Modal(false)} logos={logos} selectedLogoURL={logo2URL || null} onSelect={(logo) => { handleSelectLogo(2, logo); setShowLogo2Modal(false); }} title="Select Logo 2" />
+        <LogoSelectionModal isOpen={showLogo3Modal} onClose={() => setShowLogo3Modal(false)} logos={logos} selectedLogoURL={logo3URL || null} onSelect={(logo) => { handleSelectLogo(3, logo); setShowLogo3Modal(false); }} title="Select Logo 3" />
 
         {/* Players Scoring Container - Bottom - 70% width on desktop for YouTube Shorts margin */}
         <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">

@@ -7,7 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
+import LogoSelectionModal, { type Logo } from "@/components/LogoSelectionModal";
 import WinnerModal from "@/components/WinnerModal";
+
+const DEFAULT_LOGO = "/PSGB_Logo.png";
+const PBS_TOUR_2_CONFIG_ID = "pbs-tour-2";
 
 interface Player {
   id: string;
@@ -33,6 +37,9 @@ const PbsTour2Page = () => {
   const [winner, setWinner] = useState<Player | null>(null);
   const [showRaceToInput, setShowRaceToInput] = useState(false);
   const [tempRaceTo, setTempRaceTo] = useState("7");
+  const [logo1URL, setLogo1URL] = useState<string>(DEFAULT_LOGO);
+  const [logos, setLogos] = useState<Logo[]>([]);
+  const [showLogo1Modal, setShowLogo1Modal] = useState(false);
   const { pbsTour2IsLive, setPbsTour2IsLive, pbsTour2GameMode, setPbsTour2GameMode } =
     useLive();
   const { isManager } = useAuth();
@@ -139,6 +146,41 @@ const PbsTour2Page = () => {
 
     fetchPlayers();
   }, []);
+
+  useEffect(() => {
+    const loadLogoConfig = async () => {
+      try {
+        const configRef = doc(db, "config", PBS_TOUR_2_CONFIG_ID);
+        const snap = await getDoc(configRef);
+        if (snap.exists() && snap.data()?.logo1URL) setLogo1URL(snap.data()!.logo1URL);
+      } catch (e) {
+        console.error("Error loading logo config:", e);
+      }
+    };
+    loadLogoConfig();
+  }, []);
+
+  useEffect(() => {
+    const fetchLogos = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "logos"));
+        const list = snapshot.docs.map((d) => {
+          const data = d.data();
+          return { id: d.id, name: (data.name ?? "") as string, logoURL: (data.logoURL ?? "") as string };
+        });
+        setLogos(list.sort((a, b) => a.name.localeCompare(b.name)));
+      } catch (e) {
+        console.error("Error fetching logos:", e);
+      }
+    };
+    fetchLogos();
+  }, []);
+
+  const handleSelectLogo = (logo: Logo) => {
+    const url = logo.logoURL || "";
+    setLogo1URL(url);
+    setDoc(doc(db, "config", PBS_TOUR_2_CONFIG_ID), { logo1URL: url }, { merge: true }).catch(console.error);
+  };
 
   // Load persisted match data from Firestore
   useEffect(() => {
@@ -596,21 +638,14 @@ const PbsTour2Page = () => {
           </button>
         </div>
 
-        {/* Logo - Top Left Corner, Pinoy Sargo */}
-        <div
-          className="absolute flex flex-col z-10 items-start"
-          style={{ top: "80px", left: "30px" }}
-        >
-          <Image
-            src="/PinoySargo.png"
-            alt="Pinoy Sargo"
-            width={150}
-            height={0}
-            className="bg-white"
-            style={{ width: "150px", height: "auto", borderRadius: "50%" }}
-            unoptimized
-          />
-        </div>
+        {/* Logo - Top Left; pick from Players tab */}
+        <button type="button" onClick={() => canSelectPlayers && setShowLogo1Modal(true)} className={`absolute z-10 text-left ${canSelectPlayers ? "cursor-pointer hover:opacity-90" : "cursor-default"}`} style={{ top: "80px", left: "30px" }} title={canSelectPlayers ? "Pick logo from Players tab" : ""}>
+          <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-[50%] overflow-hidden border-2 border-white bg-white shadow flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo1URL || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
+          </div>
+        </button>
+        <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }} title="Select Logo" />
 
         {/* Players Scoring Container - Bottom - 90% width on desktop; overflow-visible for enlarged photo */}
         <div className="mt-auto w-full md:w-[90%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
