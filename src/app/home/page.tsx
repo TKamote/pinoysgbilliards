@@ -11,6 +11,7 @@ const allOverlayLinks = [
   { name: "Pinoy Sargo", href: "/pbs-tour-2" },
   { name: "Ring Games", href: "/3-players" },
   { name: "Arys", href: "/arys" },
+  { name: "Tour Manager-4", href: "/tour-manager" },
 ];
 
 const userOverlayLinks = [

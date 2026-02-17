@@ -25,6 +25,10 @@ interface LiveContextType {
   setThreePlayersIsLive: (isLive: boolean) => void;
   threePlayersGameMode: GameMode;
   setThreePlayersGameMode: (gameMode: GameMode) => void;
+  tourManagerIsLive: boolean;
+  setTourManagerIsLive: (isLive: boolean) => void;
+  tourManagerGameMode: GameMode;
+  setTourManagerGameMode: (gameMode: GameMode) => void;
 }
 
 const LiveContext = createContext<LiveContextType | undefined>(undefined);
@@ -40,6 +44,8 @@ export const LiveProvider = ({ children }: { children: ReactNode }) => {
   const [pbsTour2GameMode, setPbsTour2GameMode] = useState<GameMode>("9-ball");
   const [threePlayersIsLive, setThreePlayersIsLive] = useState(false);
   const [threePlayersGameMode, setThreePlayersGameMode] = useState<GameMode>("9-ball");
+  const [tourManagerIsLive, setTourManagerIsLive] = useState(false);
+  const [tourManagerGameMode, setTourManagerGameMode] = useState<GameMode>("9-ball");
 
   return (
     <LiveContext.Provider
@@ -64,6 +70,10 @@ export const LiveProvider = ({ children }: { children: ReactNode }) => {
         setThreePlayersIsLive,
         threePlayersGameMode,
         setThreePlayersGameMode,
+        tourManagerIsLive,
+        setTourManagerIsLive,
+        tourManagerGameMode,
+        setTourManagerGameMode,
       }}
     >
       {children}

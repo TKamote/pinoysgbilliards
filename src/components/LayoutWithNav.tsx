@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLive } from "@/contexts/LiveContext";
 import LoginModal from "@/components/LoginModal";
 
 /**
@@ -24,11 +25,40 @@ export default function LayoutWithNav({
 }) {
   const pathname = usePathname();
   const { user, username, signOut } = useAuth();
+  const {
+    isLive,
+    pbsLiveIsLive,
+    pbsTourIsLive,
+    pbsTour2IsLive,
+    threePlayersIsLive,
+    tourManagerIsLive,
+  } = useLive();
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // Hide nav only on this page when this page's GO LIVE is on (per-page, not global)
+  const thisPageLive =
+    (pathname === "/live-match" && isLive) ||
+    (pathname === "/arys" && isLive) ||
+    (pathname === "/pbs-live" && pbsLiveIsLive) ||
+    (pathname === "/pbs-tour" && pbsTourIsLive) ||
+    (pathname === "/pbs-tour-2" && pbsTour2IsLive) ||
+    (pathname === "/3-players" && threePlayersIsLive) ||
+    (pathname === "/tour-manager" && tourManagerIsLive);
+  if (thisPageLive) {
+    return (
+      <>
+        <main className="min-h-screen bg-transparent">{children}</main>
+        <LoginModal
+          isOpen={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+        />
+      </>
+    );
+  }
 
   return (
     <>
-      <nav className="bg-white shadow-lg border-b border-gray-200 relative z-50">
+      <nav className="bg-white shadow-lg border-b border-gray-200 relative z-[100]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center gap-4">
             <Link href="/home" className="flex items-center shrink-0">
@@ -42,7 +72,7 @@ export default function LayoutWithNav({
                 unoptimized
               />
             </Link>
-            <div className="flex items-center gap-6 sm:gap-8 text-sm font-medium">
+            <div className="flex items-center gap-6 sm:gap-8 text-sm font-medium relative z-10">
               {NAV_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
                 return (

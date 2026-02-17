@@ -7,6 +7,7 @@ import {
   addDoc,
   updateDoc,
   doc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +24,12 @@ interface Player {
   wins: number;
   status: "active" | "inactive";
   photoURL?: string;
+}
+
+interface Logo {
+  id: string;
+  name: string;
+  logoURL: string;
 }
 
 const PlayersPage = () => {
@@ -79,6 +86,35 @@ const PlayersPage = () => {
       mountedRef.current = false;
     };
   }, []);
+
+  const loadLogos = async () => {
+    try {
+      setLogosLoading(true);
+      const logosCollection = collection(db, "logos");
+      const snapshot = await getDocs(logosCollection);
+      const list = snapshot.docs.map((d) => {
+        const data = d.data();
+        return { id: d.id, name: (data.name ?? "") as string, logoURL: (data.logoURL ?? "") as string };
+      });
+      setLogos(list.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (e) {
+      console.error("Error loading logos:", e);
+      setLogos([]);
+    } finally {
+      setLogosLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLogos();
+  }, []);
+
+  const [logos, setLogos] = useState<Logo[]>([]);
+  const [logosLoading, setLogosLoading] = useState(true);
+  const [showLogoForm, setShowLogoForm] = useState(false);
+  const [editingLogo, setEditingLogo] = useState<Logo | null>(null);
+  const [newLogoName, setNewLogoName] = useState("");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
@@ -357,6 +393,116 @@ const PlayersPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) {
+      setLogoPreview(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const maxSize = 400;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        setLogoPreview(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveLogo = async () => {
+    const name = newLogoName.trim();
+    if (!name) {
+      alert("Please enter a logo name.");
+      return;
+    }
+    try {
+      if (editingLogo) {
+        const ref = doc(db, "logos", editingLogo.id);
+        await updateDoc(ref, { name, logoURL: logoPreview ?? editingLogo.logoURL });
+        setLogos((prev) =>
+          prev.map((l) => (l.id === editingLogo.id ? { ...l, name, logoURL: logoPreview ?? l.logoURL } : l)).sort((a, b) => a.name.localeCompare(b.name))
+        );
+      } else {
+        const ref = await addDoc(collection(db, "logos"), { name, logoURL: logoPreview ?? "" });
+        setLogos((prev) => [...prev, { id: ref.id, name, logoURL: logoPreview ?? "" }].sort((a, b) => a.name.localeCompare(b.name)));
+      }
+      setShowLogoForm(false);
+      setEditingLogo(null);
+      setNewLogoName("");
+      setLogoPreview(null);
+    } catch (e) {
+      console.error("Error saving logo:", e);
+      const msg = e instanceof Error ? e.message : "Failed to save logo.";
+      alert(`Failed to save logo. ${msg}`);
+    }
+  };
+
+  const handleDeleteLogo = async (logo: Logo) => {
+    if (!window.confirm(`Delete logo "${logo.name}"?`)) return;
+    try {
+      await deleteDoc(doc(db, "logos", logo.id));
+      setLogos((prev) => prev.filter((l) => l.id !== logo.id));
+      if (editingLogo?.id === logo.id) {
+        setShowLogoForm(false);
+        setEditingLogo(null);
+        setNewLogoName("");
+        setLogoPreview(null);
+      }
+    } catch (e) {
+      console.error("Error deleting logo:", e);
+      alert("Failed to delete logo.");
+    }
+  };
+
+  const handleEditLogo = (logo: Logo) => {
+    if (!canEditPlayers) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    setEditingLogo(logo);
+    setNewLogoName(logo.name);
+    setLogoPreview(logo.logoURL || null);
+    setShowLogoForm(true);
+  };
+
+  const handleAddLogoClick = () => {
+    if (!canEditPlayers) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    setEditingLogo(null);
+    setNewLogoName("");
+    setLogoPreview(null);
+    setShowLogoForm(true);
+  };
+
+  const handleCancelLogoEdit = () => {
+    setShowLogoForm(false);
+    setEditingLogo(null);
+    setNewLogoName("");
+    setLogoPreview(null);
   };
 
   return (
@@ -828,6 +974,104 @@ const PlayersPage = () => {
             <p className="text-gray-600">
               Click &quot;Add Player&quot; to create your first player
             </p>
+          </div>
+        )}
+
+        {/* Logos section - for use in Tour Manager-4 overlay */}
+        <div className="mt-10 bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="bg-gray-50 px-4 py-3 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900">Logos</h3>
+            <p className="text-sm text-gray-600">Add logos here; pick them in Tour Manager-4 overlay.</p>
+            <button
+              onClick={handleAddLogoClick}
+              disabled={!canEditPlayers || logosLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm disabled:opacity-50 shrink-0"
+            >
+              Add Logo
+            </button>
+          </div>
+          <div className="p-4">
+            {logosLoading ? (
+              <p className="text-gray-500 text-sm">Loading logos...</p>
+            ) : logos.length === 0 ? (
+              <p className="text-gray-500 text-sm">No logos yet. Add a logo to use in Tour Manager-4.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                {logos.map((logo) => (
+                  <div
+                    key={logo.id}
+                    className="flex flex-col items-center border border-gray-200 rounded-lg p-2 hover:border-blue-300"
+                  >
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border flex items-center justify-center">
+                      {logo.logoURL ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logo.logoURL} alt={logo.name} className="w-full h-full object-contain" />
+                      ) : (
+                        <span className="text-gray-400 text-xs">No image</span>
+                      )}
+                    </div>
+                    <span className="mt-1 text-sm font-medium text-gray-900 truncate w-full text-center">{logo.name}</span>
+                    {canEditPlayers && (
+                      <div className="flex gap-1 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleEditLogo(logo)}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLogo(logo)}
+                          className="text-xs text-red-600 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Add/Edit Logo Modal */}
+        {showLogoForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">{editingLogo ? "Edit Logo" : "Add Logo"}</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={newLogoName}
+                    onChange={(e) => setNewLogoName(e.target.value)}
+                    placeholder="e.g. Team A"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
+                  {logoPreview && (
+                    <div className="mb-2 w-24 h-24 rounded-lg overflow-hidden border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={logoPreview} alt="Preview" className="w-full h-full object-contain" />
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" onChange={handleLogoFile} className="text-sm text-gray-600" />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button onClick={handleSaveLogo} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                  Save
+                </button>
+                <button onClick={handleCancelLogoEdit} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
