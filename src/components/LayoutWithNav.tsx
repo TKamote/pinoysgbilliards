@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLive } from "@/contexts/LiveContext";
+import { useLive, type GameMode } from "@/contexts/LiveContext";
 import LoginModal from "@/components/LoginModal";
 
 /**
@@ -24,7 +24,7 @@ export default function LayoutWithNav({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { user, username, signOut } = useAuth();
+  const { user, username, signOut, isManager } = useAuth();
   const {
     isLive,
     pbsLiveIsLive,
@@ -32,6 +32,21 @@ export default function LayoutWithNav({
     pbsTour2IsLive,
     threePlayersIsLive,
     tourManagerIsLive,
+    pbsCup8IsLive,
+    gameMode,
+    setGameMode,
+    pbsGameMode,
+    setPbsGameMode,
+    pbsTourGameMode,
+    setPbsTourGameMode,
+    pbsTour2GameMode,
+    setPbsTour2GameMode,
+    threePlayersGameMode,
+    setThreePlayersGameMode,
+    tourManagerGameMode,
+    setTourManagerGameMode,
+    pbsCup8GameMode,
+    setPbsCup8GameMode,
   } = useLive();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -43,7 +58,8 @@ export default function LayoutWithNav({
     (pathname === "/pbs-tour" && pbsTourIsLive) ||
     (pathname === "/pbs-tour-2" && pbsTour2IsLive) ||
     (pathname === "/3-players" && threePlayersIsLive) ||
-    (pathname === "/tour-manager" && tourManagerIsLive);
+    (pathname === "/tour-manager" && tourManagerIsLive) ||
+    (pathname === "/pbs-cup-8" && pbsCup8IsLive);
   if (thisPageLive) {
     return (
       <>
@@ -90,6 +106,86 @@ export default function LayoutWithNav({
                 );
               })}
             </div>
+            {/* Game Mode selector (9/10/15 ball) - shown on overlay pages for managers */}
+            {isManager && (
+              <div className="hidden sm:flex items-center space-x-2 text-sm">
+                {(pathname === "/live-match" || pathname === "/arys") && (
+                  <>
+                    <label htmlFor="nav-gameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select
+                      id="nav-gameMode"
+                      value={gameMode}
+                      onChange={(e) => setGameMode(e.target.value as GameMode)}
+                      className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1"
+                    >
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+                {pathname === "/pbs-live" && (
+                  <>
+                    <label htmlFor="nav-pbsGameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select id="nav-pbsGameMode" value={pbsGameMode} onChange={(e) => setPbsGameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+                {pathname === "/pbs-tour" && (
+                  <>
+                    <label htmlFor="nav-pbsTourGameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select id="nav-pbsTourGameMode" value={pbsTourGameMode} onChange={(e) => setPbsTourGameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+                {pathname === "/pbs-tour-2" && (
+                  <>
+                    <label htmlFor="nav-pbsTour2GameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select id="nav-pbsTour2GameMode" value={pbsTour2GameMode} onChange={(e) => setPbsTour2GameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+                {pathname === "/3-players" && (
+                  <>
+                    <label htmlFor="nav-threePlayersGameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select id="nav-threePlayersGameMode" value={threePlayersGameMode} onChange={(e) => setThreePlayersGameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+                {pathname === "/tour-manager" && (
+                  <>
+                    <label htmlFor="nav-tourManagerGameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select id="nav-tourManagerGameMode" value={tourManagerGameMode} onChange={(e) => setTourManagerGameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+                {pathname === "/pbs-cup-8" && (
+                  <>
+                    <label htmlFor="nav-pbsCup8GameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select id="nav-pbsCup8GameMode" value={pbsCup8GameMode} onChange={(e) => setPbsCup8GameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+              </div>
+            )}
             <div className="flex items-center gap-2 shrink-0">
               {user ? (
                 <>

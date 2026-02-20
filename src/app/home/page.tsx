@@ -6,6 +6,7 @@ import Link from "next/link";
 
 const allOverlayLinks = [
   { name: "Live Match", href: "/live-match" },
+  { name: "PBS Cup 8", href: "/pbs-cup-8" },
   { name: "PBS Live", href: "/pbs-live" },
   { name: "PBS Tour", href: "/pbs-tour" },
   { name: "Pinoy Sargo", href: "/pbs-tour-2" },
