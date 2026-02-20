@@ -490,7 +490,7 @@ const PBSCup8Page = () => {
               <div key={index} className="flex items-center gap-0 overflow-visible">
                 <div
                   className="relative px-2 py-1 flex items-center justify-between space-x-2 overflow-visible text-white"
-                  style={{ minWidth: "198px", backgroundColor: teamBg }}
+                  style={{ minWidth: "247.5px", backgroundColor: teamBg }}
                 >
                 <div className="flex items-center space-x-2 flex-1 min-w-0 overflow-visible">
                   <button
@@ -509,8 +509,8 @@ const PBSCup8Page = () => {
                   <button
                     type="button"
                     onClick={() => canSelectPlayers && setShowTeamModalIndex(index)}
-                    className={`flex-1 min-w-0 text-left font-bold text-sm truncate ${canSelectPlayers ? "hover:opacity-80" : ""}`}
-                    style={{ fontSize: "18px" }}
+                    className={`flex-1 min-w-0 text-left font-bold truncate ${canSelectPlayers ? "hover:opacity-80" : ""}`}
+                    style={{ fontSize: "22.5px" }}
                   >
                     {name}
                   </button>
@@ -537,7 +537,7 @@ const PBSCup8Page = () => {
                     </button>
                   </div>
                 </div>
-                <div className="font-bold shrink-0" style={{ fontSize: "22px", color: "#FFD700" }}>
+                <div className="font-bold shrink-0" style={{ fontSize: "27.5px", color: "#FFD700" }}>
                   {slot.score}
                 </div>
                 </div>
@@ -560,7 +560,7 @@ const PBSCup8Page = () => {
               </div>
             );
           })}
-          <div className="bg-black px-4 py-2 text-white flex items-center space-x-2" style={{ minWidth: "198px" }}>
+          <div className="bg-black px-4 py-2 text-white flex items-center space-x-2" style={{ minWidth: "247.5px" }}>
             <div className="text-lg sm:text-xl font-bold">Race to</div>
             <div className="text-lg sm:text-xl font-bold">5</div>
             {user && (
