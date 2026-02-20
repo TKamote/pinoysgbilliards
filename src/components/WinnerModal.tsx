@@ -18,6 +18,8 @@ interface WinnerModalProps {
   player2Score: number;
   player1Name: string;
   player2Name: string;
+  /** When provided, show "Confirm Winner" and call it (then onClose) instead of only "Reset Match" */
+  onConfirm?: () => void;
 }
 
 const WinnerModal = ({
@@ -29,6 +31,7 @@ const WinnerModal = ({
   player2Score,
   player1Name,
   player2Name,
+  onConfirm,
 }: WinnerModalProps) => {
   if (!isOpen || !winner) return null;
 
@@ -96,13 +99,26 @@ const WinnerModal = ({
           </div>
         </div>
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 sm:px-7 sm:py-2.5 md:px-8 md:py-3 rounded-lg text-sm sm:text-base md:text-lg font-bold transition-colors w-full sm:w-auto"
-        >
-          Reset Match
-        </button>
+        {/* Buttons */}
+        <div className="flex flex-wrap gap-2 justify-center">
+          {onConfirm && (
+            <button
+              onClick={() => {
+                onConfirm();
+                onClose();
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 sm:px-7 sm:py-2.5 md:px-8 md:py-3 rounded-lg text-sm sm:text-base md:text-lg font-bold transition-colors"
+            >
+              Confirm Winner
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 sm:px-7 sm:py-2.5 md:px-8 md:py-3 rounded-lg text-sm sm:text-base md:text-lg font-bold transition-colors"
+          >
+            {onConfirm ? "Cancel" : "Reset Match"}
+          </button>
+        </div>
       </div>
     </div>
   );

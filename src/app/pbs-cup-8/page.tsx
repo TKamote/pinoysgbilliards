@@ -22,10 +22,10 @@ interface Player {
   points: number;
 }
 
-type TeamSlot = { player: Player | null; score: number };
+type TeamSlot = { player: Player | null; score: number; hidden?: boolean };
 
 const initialTeams = (): TeamSlot[] =>
-  Array.from({ length: 8 }, () => ({ player: null, score: 0 }));
+  Array.from({ length: 8 }, () => ({ player: null, score: 0, hidden: false }));
 
 const getBallNumbers = (mode: GameMode): number[] => {
   switch (mode) {
@@ -61,6 +61,13 @@ const PBSCup8Page = () => {
   const [winner, setWinner] = useState<Player | null>(null);
   const [pocketedBalls, setPocketedBalls] = useState<Set<number>>(new Set());
   const [showTeamModalIndex, setShowTeamModalIndex] = useState<number | null>(null);
+  // Bottom bar: two selectable players (independent from the 8 teams)
+  const [barPlayer1, setBarPlayer1] = useState<Player | null>(null);
+  const [barPlayer2, setBarPlayer2] = useState<Player | null>(null);
+  const [showBarPlayer1Modal, setShowBarPlayer1Modal] = useState(false);
+  const [showBarPlayer2Modal, setShowBarPlayer2Modal] = useState(false);
+  const [playerUIScore1, setPlayerUIScore1] = useState(0);
+  const [playerUIScore2, setPlayerUIScore2] = useState(0);
 
   const { pbsCup8IsLive, setPbsCup8IsLive, pbsCup8GameMode, setPbsCup8GameMode } = useLive();
   const { user } = useAuth();
@@ -118,7 +125,6 @@ const PBSCup8Page = () => {
     fetchLogos();
   }, []);
 
-  // Load match data from Firestore
   useEffect(() => {
     const loadMatchData = async () => {
       try {
@@ -136,24 +142,44 @@ const PBSCup8Page = () => {
           const name = data[`team${n}Name`];
           const photoURL = data[`team${n}PhotoURL`];
           const score = data[`team${n}Score`];
+          const hidden = data[`team${n}Hidden`] === true;
           if (id && name) {
             const fromList = players.find((p) => p.id === id);
             next[i] = {
               player: fromList || { id, name, photoURL: photoURL || "", points: 0 },
               score: typeof score === "number" ? score : 0,
+              hidden,
             };
           } else if (typeof score === "number") {
             next[i].score = score;
+            next[i].hidden = hidden;
+          } else {
+            next[i].hidden = hidden;
           }
         }
         setTeams(next);
-        // Do not restore raceTo from Firestore - keep default 5 (same as Live Match left panel)
-        if (data.gameMode && ["9-ball", "10-ball", "15-ball"].includes(data.gameMode)) {
+        if (data?.raceTo && typeof data.raceTo === "number") setRaceTo(Math.min(50, Math.max(1, data.raceTo)));
+        if (data?.gameMode && ["9-ball", "10-ball", "15-ball"].includes(data.gameMode)) {
           setPbsCup8GameMode(data.gameMode as GameMode);
         }
-        if (data.pocketedBalls && Array.isArray(data.pocketedBalls)) {
+        if (data?.pocketedBalls && Array.isArray(data.pocketedBalls)) {
           setPocketedBalls(new Set(data.pocketedBalls));
         }
+        if (typeof data?.playerUIScore1 === "number") setPlayerUIScore1(data.playerUIScore1);
+        if (typeof data?.playerUIScore2 === "number") setPlayerUIScore2(data.playerUIScore2);
+        // Bottom bar players (not tied to team1/team2)
+        const bar1Id = data?.barPlayer1Id;
+        const bar1Name = data?.barPlayer1Name;
+        const bar2Id = data?.barPlayer2Id;
+        const bar2Name = data?.barPlayer2Name;
+        if (bar1Id && bar1Name) {
+          const p1 = players.find((p) => p.id === bar1Id);
+          setBarPlayer1(p1 || { id: bar1Id, name: bar1Name, photoURL: (data.barPlayer1PhotoURL as string) || "", points: 0 });
+        } else setBarPlayer1(null);
+        if (bar2Id && bar2Name) {
+          const p2 = players.find((p) => p.id === bar2Id);
+          setBarPlayer2(p2 || { id: bar2Id, name: bar2Name, photoURL: (data.barPlayer2PhotoURL as string) || "", points: 0 });
+        } else setBarPlayer2(null);
       } catch (e) {
         console.error("Error loading match data:", e);
       } finally {
@@ -170,6 +196,14 @@ const PBSCup8Page = () => {
         raceTo,
         gameMode: pbsCup8GameMode,
         pocketedBalls: Array.from(pocketedBalls),
+        playerUIScore1,
+        playerUIScore2,
+        barPlayer1Id: barPlayer1?.id ?? null,
+        barPlayer1Name: barPlayer1?.name ?? null,
+        barPlayer1PhotoURL: barPlayer1?.photoURL ?? "",
+        barPlayer2Id: barPlayer2?.id ?? null,
+        barPlayer2Name: barPlayer2?.name ?? null,
+        barPlayer2PhotoURL: barPlayer2?.photoURL ?? "",
         updatedAt: new Date().toISOString(),
       };
       for (let i = 0; i < 8; i++) {
@@ -178,18 +212,19 @@ const PBSCup8Page = () => {
         payload[`team${n}Name`] = teams[i].player?.name ?? `Team ${n}`;
         payload[`team${n}PhotoURL`] = teams[i].player?.photoURL ?? "";
         payload[`team${n}Score`] = teams[i].score;
+        payload[`team${n}Hidden`] = teams[i].hidden === true;
       }
       await setDoc(doc(db, "current_match", PBS_CUP_8_MATCH_ID), payload, { merge: true });
     } catch (error) {
       if ((error as { code?: string })?.code === "permission-denied") showLimitReachedModal();
       else console.error("Error saving match data:", error);
     }
-  }, [user, raceTo, pbsCup8GameMode, pocketedBalls, teams, showLimitReachedModal]);
+  }, [user, raceTo, pbsCup8GameMode, pocketedBalls, playerUIScore1, playerUIScore2, barPlayer1, barPlayer2, teams, showLimitReachedModal]);
 
   useEffect(() => {
     if (loading) return;
     saveMatchData();
-  }, [teams, raceTo, pbsCup8GameMode, pocketedBalls, loading, saveMatchData]);
+  }, [teams, raceTo, pbsCup8GameMode, pocketedBalls, playerUIScore1, playerUIScore2, barPlayer1, barPlayer2, loading, saveMatchData]);
 
   const handleTeamSelect = useCallback(
     async (index: number, selected: Player) => {
@@ -219,6 +254,52 @@ const PBSCup8Page = () => {
     [showLimitReachedModal]
   );
 
+  const handleBarPlayer1Select = useCallback(
+    async (selected: Player) => {
+      setBarPlayer1(selected);
+      setShowBarPlayer1Modal(false);
+      try {
+        await setDoc(
+          doc(db, "current_match", PBS_CUP_8_MATCH_ID),
+          {
+            barPlayer1Id: selected.id,
+            barPlayer1Name: selected.name,
+            barPlayer1PhotoURL: selected.photoURL || "",
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+        else console.error("Error saving bar player 1:", e);
+      }
+    },
+    [showLimitReachedModal]
+  );
+
+  const handleBarPlayer2Select = useCallback(
+    async (selected: Player) => {
+      setBarPlayer2(selected);
+      setShowBarPlayer2Modal(false);
+      try {
+        await setDoc(
+          doc(db, "current_match", PBS_CUP_8_MATCH_ID),
+          {
+            barPlayer2Id: selected.id,
+            barPlayer2Name: selected.name,
+            barPlayer2PhotoURL: selected.photoURL || "",
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+        else console.error("Error saving bar player 2:", e);
+      }
+    },
+    [showLimitReachedModal]
+  );
+
   const setTeamScore = useCallback((index: number, delta: number) => {
     setTeams((prev) => {
       const next = [...prev];
@@ -226,6 +307,40 @@ const PBSCup8Page = () => {
       return next;
     });
   }, []);
+
+  const handleDeleteTeam = useCallback(
+    async (index: number) => {
+      const n = index + 1;
+      setTeams((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], hidden: true };
+        return next;
+      });
+      try {
+        await setDoc(
+          doc(db, "current_match", PBS_CUP_8_MATCH_ID),
+          { [`team${n}Hidden`]: true, updatedAt: new Date().toISOString() },
+          { merge: true }
+        );
+      } catch (e) {
+        if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+        else console.error("Error deleting team:", e);
+      }
+    },
+    [showLimitReachedModal]
+  );
+
+  const handleResetTeamUI = useCallback(async () => {
+    setTeams((prev) => prev.map((t) => ({ ...t, hidden: false })));
+    try {
+      const payload: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+      for (let n = 1; n <= 8; n++) payload[`team${n}Hidden`] = false;
+      await setDoc(doc(db, "current_match", PBS_CUP_8_MATCH_ID), payload, { merge: true });
+    } catch (e) {
+      if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+      else console.error("Error resetting team UI:", e);
+    }
+  }, [showLimitReachedModal]);
 
   const handleSelectLogo = (logo: Logo) => {
     const url = logo.logoURL || "";
@@ -235,10 +350,10 @@ const PBSCup8Page = () => {
     });
   };
 
-  // Winner: first team to reach raceTo
   useEffect(() => {
     if (loading || showWinnerModal) return;
     for (let i = 0; i < 8; i++) {
+      if (teams[i].hidden) continue;
       if (teams[i].score >= raceTo && teams[i].player) {
         setWinner(teams[i].player);
         setShowWinnerModal(true);
@@ -277,8 +392,6 @@ const PBSCup8Page = () => {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      // Handle - (minus) key for decrementing raceTo
       if (e.key === "-" || e.key === "_") {
         e.preventDefault();
         setRaceTo((prev) => {
@@ -294,7 +407,6 @@ const PBSCup8Page = () => {
         });
         return;
       }
-      // Handle + (plus) key for incrementing raceTo
       if (e.key === "+" || e.key === "=") {
         e.preventDefault();
         setRaceTo((prev) => {
@@ -310,7 +422,6 @@ const PBSCup8Page = () => {
         });
         return;
       }
-
       if (e.key === "Delete" || e.key === "Del" || e.keyCode === 46) {
         e.preventDefault();
         if (showWinnerModal) handleWinnerModalClose();
@@ -326,6 +437,28 @@ const PBSCup8Page = () => {
         } else {
           lastResetPress.current = now;
         }
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      // Bottom Players UI score keys (same as live-match) — not bound to teams
+      switch (key) {
+        case "q":
+          e.preventDefault();
+          setPlayerUIScore1((prev) => prev + 1);
+          break;
+        case "a":
+          e.preventDefault();
+          setPlayerUIScore1((prev) => Math.max(0, prev - 1));
+          break;
+        case "e":
+          e.preventDefault();
+          setPlayerUIScore2((prev) => prev + 1);
+          break;
+        case "d":
+          e.preventDefault();
+          setPlayerUIScore2((prev) => Math.max(0, prev - 1));
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyPress);
@@ -346,33 +479,31 @@ const PBSCup8Page = () => {
           </button>
         </div>
 
-        {/* Left: 8 teams, then Race to 5 below (same width as teams, red background); top offset keeps gap below logo */}
         <div className="absolute z-10 flex flex-col items-start space-y-2 overflow-visible" style={{ top: "160px", left: "30px" }}>
           {teams.map((slot, index) => {
-            const isDark = Math.floor(index / 2) % 2 === 1;
+            if (slot.hidden) return null;
+            const teamBg = ["#1a1a2e", "#16213e", "#0f3460", "#b71c1c", "#1b5e20", "#2d1b4e", "#4a148c", "#1e3a5f"][index];
             const name = slot.player?.name ?? `Team ${index + 1}`;
             const photo = slot.player?.photoURL || null;
             const placeholder = getPlaceholder(slot.player?.id);
             return (
-              <div
-                key={index}
-                className={`px-2 py-1 flex items-center justify-between space-x-2 overflow-visible ${
-                  isDark ? "bg-black text-white" : "bg-gray-200 text-gray-900"
-                }`}
-                style={{ minWidth: "198px" }}
-              >
+              <div key={index} className="flex items-center gap-0 overflow-visible">
+                <div
+                  className="relative px-2 py-1 flex items-center justify-between space-x-2 overflow-visible text-white"
+                  style={{ minWidth: "198px", backgroundColor: teamBg }}
+                >
                 <div className="flex items-center space-x-2 flex-1 min-w-0 overflow-visible">
                   <button
                     type="button"
                     onClick={() => canSelectPlayers && setShowTeamModalIndex(index)}
-                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 border-2 flex items-center justify-center -my-1 ${
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 border-2 border-white flex items-center justify-center -my-1 ${
                       canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"
-                    } ${isDark ? "border-white" : "border-gray-700"} ${!photo && isDark ? "bg-gray-800" : ""} ${!photo && !isDark ? "bg-gray-300" : ""}`}
+                    } ${!photo ? "bg-black/30" : ""}`}
                   >
                     {photo ? (
-                      <Image src={photo} alt={name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
+                      <Image key={slot.player?.id ?? `empty-${index}`} src={photo} alt={name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
                     ) : (
-                      <Image src={placeholder} alt={name} width={56} height={56} className="w-full h-full object-cover" />
+                      <Image key={slot.player?.id ?? `empty-${index}`} src={placeholder} alt={name} width={56} height={56} className="w-full h-full object-cover" />
                     )}
                   </button>
                   <button
@@ -406,20 +537,45 @@ const PBSCup8Page = () => {
                     </button>
                   </div>
                 </div>
-                <div className="font-bold shrink-0" style={{ fontSize: "22px", color: isDark ? "#FFD700" : "#B45309" }}>
+                <div className="font-bold shrink-0" style={{ fontSize: "22px", color: "#FFD700" }}>
                   {slot.score}
                 </div>
+                </div>
+                {canSelectPlayers && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteTeam(index);
+                    }}
+                    className="p-1.5 text-white opacity-40 hover:opacity-100 transition-opacity rounded shrink-0 cursor-pointer"
+                    title="Clear this team slot"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                )}
               </div>
             );
           })}
-          {/* Race to 5 - below last team, same width as teams, red background */}
-          <div className="bg-red-600 px-4 py-2 text-white flex items-center space-x-2" style={{ minWidth: "198px" }}>
+          <div className="bg-black px-4 py-2 text-white flex items-center space-x-2" style={{ minWidth: "198px" }}>
             <div className="text-lg sm:text-xl font-bold">Race to</div>
             <div className="text-lg sm:text-xl font-bold">5</div>
+            {user && (
+              <button
+                type="button"
+                onClick={handleResetTeamUI}
+                className="text-xs px-1.5 py-0.5 rounded border border-white/50 hover:bg-white/20 shrink-0"
+                title="Show all team rows again"
+              >
+                Reset
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Logo top-left (above teams) */}
         <button
           type="button"
           onClick={() => canSelectPlayers && setShowLogo1Modal(true)}
@@ -443,39 +599,34 @@ const PBSCup8Page = () => {
           title="Select Logo"
         />
 
-        {/* Players Scoring Container - Bottom (same as Live Match): Team 1 | Race to X | Team 2 */}
+        {/* Bottom bar: two selectable players (barPlayer1/barPlayer2), not bound to 8 teams. Keyboard: Q/A, E/D */}
         <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
-          {/* Player 1 (Team 1) - Dark Indigo: Photo | Name | Score */}
           <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
             <button
-              onClick={() => canSelectPlayers && setShowTeamModalIndex(0)}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
-                canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"
-              } ${teams[0]?.player?.photoURL ? "bg-transparent" : "bg-indigo-800"}`}
+              type="button"
+              onClick={() => canSelectPlayers && setShowBarPlayer1Modal(true)}
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white transition-all duration-300 ${canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"} ${barPlayer1?.photoURL ? "bg-transparent" : "bg-indigo-800"}`}
             >
-              {teams[0]?.player?.photoURL ? (
-                <Image src={teams[0].player.photoURL} alt={teams[0].player?.name ?? "Team 1"} width={56} height={56} className="w-full h-full object-cover" unoptimized />
+              {barPlayer1?.photoURL ? (
+                <Image src={barPlayer1.photoURL} alt={barPlayer1.name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
               ) : (
-                <Image src={getPlaceholder(teams[0]?.player?.id)} alt={teams[0]?.player?.name ?? "Team 1"} width={56} height={56} className="w-full h-full object-cover" />
+                <Image src={getPlaceholder(barPlayer1?.id)} alt={barPlayer1?.name ?? "Player 1"} width={56} height={56} className="w-full h-full object-cover" />
               )}
             </button>
             <button
-              onClick={() => canSelectPlayers && setShowTeamModalIndex(0)}
-              className={`flex-1 min-w-0 h-full flex items-center justify-center ${canSelectPlayers ? "cursor-pointer hover:bg-indigo-800" : "cursor-default"} transition-colors px-2`}
+              type="button"
+              onClick={() => canSelectPlayers && setShowBarPlayer1Modal(true)}
+              className={`flex-1 min-w-0 h-full flex items-center justify-center px-2 ${canSelectPlayers ? "cursor-pointer hover:bg-indigo-800" : "cursor-default"} transition-colors`}
             >
               <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
-                {teams[0]?.player?.name ?? "Team 1"}
+                {barPlayer1?.name ?? "Player 1"}
               </div>
             </button>
-            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2">
-              {teams[0]?.score ?? 0}
-            </div>
-            <div className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center opacity-0 shrink-0" style={{ lineHeight: 1 }}>
-              <span style={{ display: "block", marginTop: "-0.1em" }}>‹</span>
+            <div className="text-base sm:text-xl md:text-3xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2 min-w-[2ch] text-center">
+              {playerUIScore1}
             </div>
           </div>
 
-          {/* Race To - Center (gradient indigo) */}
           <div className="flex items-center justify-center bg-gradient-to-r from-indigo-900 to-indigo-800 h-12 sm:h-14 md:h-16 min-w-[120px] sm:min-w-[160px] md:min-w-[200px] lg:min-w-[240px] px-2 sm:px-3 md:px-4">
             {showRaceToInput && user ? (
               <div className="flex items-center space-x-1">
@@ -510,38 +661,33 @@ const PBSCup8Page = () => {
             )}
           </div>
 
-          {/* Player 2 (Team 2) - Dark Indigo (lighter): Score | Name | Photo */}
           <div className="bg-indigo-800 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
-            <div className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mx-1 sm:mx-1.5 md:mx-2 w-6 sm:w-8 md:w-10 lg:w-12 h-full flex items-center justify-center opacity-0 shrink-0" style={{ lineHeight: 1 }}>
-              <span style={{ display: "block", marginTop: "-0.1em" }}>›</span>
-            </div>
-            <div className="text-base sm:text-xl md:text-3xl lg:text-[38px] xl:text-5xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2">
-              {teams[1]?.score ?? 0}
+            <div className="text-base sm:text-xl md:text-3xl font-bold text-white shrink-0 mx-1 sm:mx-1.5 md:mx-2 min-w-[2ch] text-center">
+              {playerUIScore2}
             </div>
             <button
-              onClick={() => canSelectPlayers && setShowTeamModalIndex(1)}
-              className={`flex-1 min-w-0 h-full flex items-center justify-center ${canSelectPlayers ? "cursor-pointer hover:bg-indigo-700" : "cursor-default"} transition-colors px-2`}
+              type="button"
+              onClick={() => canSelectPlayers && setShowBarPlayer2Modal(true)}
+              className={`flex-1 min-w-0 h-full flex items-center justify-center px-2 ${canSelectPlayers ? "cursor-pointer hover:bg-indigo-700" : "cursor-default"} transition-colors`}
             >
               <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
-                {teams[1]?.player?.name ?? "Team 2"}
+                {barPlayer2?.name ?? "Player 2"}
               </div>
             </button>
             <button
-              onClick={() => canSelectPlayers && setShowTeamModalIndex(1)}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
-                canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"
-              } ${teams[1]?.player?.photoURL ? "bg-transparent" : "bg-indigo-700"}`}
+              type="button"
+              onClick={() => canSelectPlayers && setShowBarPlayer2Modal(true)}
+              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white transition-all duration-300 ${canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"} ${barPlayer2?.photoURL ? "bg-transparent" : "bg-indigo-700"}`}
             >
-              {teams[1]?.player?.photoURL ? (
-                <Image src={teams[1].player.photoURL} alt={teams[1].player?.name ?? "Team 2"} width={56} height={56} className="w-full h-full object-cover" unoptimized />
+              {barPlayer2?.photoURL ? (
+                <Image src={barPlayer2.photoURL} alt={barPlayer2.name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
               ) : (
-                <Image src={getPlaceholder(teams[1]?.player?.id)} alt={teams[1]?.player?.name ?? "Team 2"} width={56} height={56} className="w-full h-full object-cover" />
+                <Image src={getPlaceholder(barPlayer2?.id)} alt={barPlayer2?.name ?? "Player 2"} width={56} height={56} className="w-full h-full object-cover" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Billiards Ball Icons (same as Live Match) */}
         <div className="mt-2 sm:mt-3 md:mt-4 flex flex-col items-center px-2">
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-wrap justify-center">
             <div className="flex space-x-1 sm:space-x-2 md:space-x-3 lg:space-x-4 bg-amber-50 rounded-full px-2 sm:px-4 md:px-6 py-1 flex-wrap justify-center">
@@ -577,6 +723,27 @@ const PBSCup8Page = () => {
             selectedPlayerId={teams[showTeamModalIndex]?.player?.id ?? null}
             onSelect={(p) => handleTeamSelect(showTeamModalIndex, p)}
             title={`Select Team ${showTeamModalIndex + 1}`}
+          />
+        )}
+
+        {showBarPlayer1Modal && (
+          <PlayerSelectionModal
+            isOpen={true}
+            onClose={() => setShowBarPlayer1Modal(false)}
+            players={players}
+            selectedPlayerId={barPlayer1?.id ?? null}
+            onSelect={handleBarPlayer1Select}
+            title="Select bottom bar – Player 1"
+          />
+        )}
+        {showBarPlayer2Modal && (
+          <PlayerSelectionModal
+            isOpen={true}
+            onClose={() => setShowBarPlayer2Modal(false)}
+            players={players}
+            selectedPlayerId={barPlayer2?.id ?? null}
+            onSelect={handleBarPlayer2Select}
+            title="Select bottom bar – Player 2"
           />
         )}
 
