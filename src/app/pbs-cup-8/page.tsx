@@ -9,7 +9,6 @@ import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import LogoSelectionModal, { type Logo } from "@/components/LogoSelectionModal";
-import WinnerModal from "@/components/WinnerModal";
 
 const DEFAULT_LOGO = "/PSGB_Logo.png";
 const PBS_CUP_8_CONFIG_ID = "pbs-cup-8";
@@ -57,8 +56,6 @@ const PBSCup8Page = () => {
   const [logo1URL, setLogo1URL] = useState<string>(DEFAULT_LOGO);
   const [logos, setLogos] = useState<Logo[]>([]);
   const [showLogo1Modal, setShowLogo1Modal] = useState(false);
-  const [showWinnerModal, setShowWinnerModal] = useState(false);
-  const [winner, setWinner] = useState<Player | null>(null);
   const [pocketedBalls, setPocketedBalls] = useState<Set<number>>(new Set());
   const [showTeamModalIndex, setShowTeamModalIndex] = useState<number | null>(null);
   // Bottom bar: two selectable players (independent from the 8 teams)
@@ -350,18 +347,6 @@ const PBSCup8Page = () => {
     });
   };
 
-  useEffect(() => {
-    if (loading || showWinnerModal) return;
-    for (let i = 0; i < 8; i++) {
-      if (teams[i].hidden) continue;
-      if (teams[i].score >= raceTo && teams[i].player) {
-        setWinner(teams[i].player);
-        setShowWinnerModal(true);
-        return;
-      }
-    }
-  }, [teams, raceTo, loading, showWinnerModal]);
-
   const handleRaceToChange = () => {
     const n = parseInt(tempRaceTo, 10);
     if (!isNaN(n) && n >= 1 && n <= 50) {
@@ -369,12 +354,6 @@ const PBSCup8Page = () => {
       setShowRaceToInput(false);
     }
   };
-
-  const handleWinnerModalClose = useCallback(() => {
-    setShowWinnerModal(false);
-    setWinner(null);
-    setTeams((prev) => prev.map((t) => ({ ...t, score: 0 })));
-  }, []);
 
   const handleResetBalls = useCallback(() => setPocketedBalls(new Set()), []);
   const handleBallClick = (ballNumber: number) => {
@@ -424,8 +403,7 @@ const PBSCup8Page = () => {
       }
       if (e.key === "Delete" || e.key === "Del" || e.keyCode === 46) {
         e.preventDefault();
-        if (showWinnerModal) handleWinnerModalClose();
-        else handleResetBalls();
+        handleResetBalls();
         return;
       }
       if (e.key === "r" || e.key === "R") {
@@ -463,7 +441,7 @@ const PBSCup8Page = () => {
     };
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [showWinnerModal, handleWinnerModalClose, handleResetBalls, user, loading]);
+  }, [handleResetBalls, user, loading]);
 
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
@@ -746,17 +724,6 @@ const PBSCup8Page = () => {
             title="Select bottom bar – Player 2"
           />
         )}
-
-        <WinnerModal
-          isOpen={showWinnerModal}
-          onClose={handleWinnerModalClose}
-          winner={winner}
-          getPlayerPlaceholder={(id) => getPlaceholder(id)}
-          player1Score={winner ? teams.find((t) => t.player?.id === winner.id)?.score ?? 0 : 0}
-          player2Score={raceTo}
-          player1Name={winner?.name ?? ""}
-          player2Name={`Race to ${raceTo}`}
-        />
       </div>
     </div>
   );

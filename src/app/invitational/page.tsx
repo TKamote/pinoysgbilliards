@@ -14,12 +14,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUsage } from "@/contexts/UsageContext";
 import TournamentWinnerModal from "@/components/TournamentWinnerModal";
 
-export type InvitationalTab = "8-double" | "8-single" | "4-double" | "4-single";
+export type InvitationalTab = "8-double" | "8-single" | "4-double" | "4-single" | "16-single";
 const TABS: { id: InvitationalTab; label: string }[] = [
   { id: "8-double", label: "8 Double" },
   { id: "8-single", label: "8 Single" },
   { id: "4-double", label: "4 Double" },
   { id: "4-single", label: "4 Single" },
+  { id: "16-single", label: "16 Single" },
 ];
 const DEFAULT_TAB: InvitationalTab = "8-double";
 const TOUR_MANAGER_MATCH_ID = "tour-manager";
@@ -125,6 +126,41 @@ const ROUND_LABEL_4_SE: Record<string, string> = {
   "4-se-m1": "Semis", "4-se-m2": "Semis", "4-se-m3": "Final",
 };
 
+// 16-player single elimination: 15 matches (R1 → QF → SF → Final)
+const MATCH_IDS_16_SE = [
+  "16-se-m1", "16-se-m2", "16-se-m3", "16-se-m4",
+  "16-se-m5", "16-se-m6", "16-se-m7", "16-se-m8",
+  "16-se-m9", "16-se-m10", "16-se-m11", "16-se-m12",
+  "16-se-m13", "16-se-m14",
+  "16-se-m15",
+] as const;
+
+const ADVANCEMENT_16_SE: Record<string, { winner?: { nextId: string; slot: Slot } }> = {
+  "16-se-m1": { winner: { nextId: "16-se-m9", slot: "player1" } },
+  "16-se-m2": { winner: { nextId: "16-se-m9", slot: "player2" } },
+  "16-se-m3": { winner: { nextId: "16-se-m10", slot: "player1" } },
+  "16-se-m4": { winner: { nextId: "16-se-m10", slot: "player2" } },
+  "16-se-m5": { winner: { nextId: "16-se-m11", slot: "player1" } },
+  "16-se-m6": { winner: { nextId: "16-se-m11", slot: "player2" } },
+  "16-se-m7": { winner: { nextId: "16-se-m12", slot: "player1" } },
+  "16-se-m8": { winner: { nextId: "16-se-m12", slot: "player2" } },
+  "16-se-m9": { winner: { nextId: "16-se-m13", slot: "player1" } },
+  "16-se-m10": { winner: { nextId: "16-se-m13", slot: "player2" } },
+  "16-se-m11": { winner: { nextId: "16-se-m14", slot: "player1" } },
+  "16-se-m12": { winner: { nextId: "16-se-m14", slot: "player2" } },
+  "16-se-m13": { winner: { nextId: "16-se-m15", slot: "player1" } },
+  "16-se-m14": { winner: { nextId: "16-se-m15", slot: "player2" } },
+  "16-se-m15": {},
+};
+
+const ROUND_LABEL_16_SE: Record<string, string> = {
+  "16-se-m1": "R1", "16-se-m2": "R1", "16-se-m3": "R1", "16-se-m4": "R1",
+  "16-se-m5": "R1", "16-se-m6": "R1", "16-se-m7": "R1", "16-se-m8": "R1",
+  "16-se-m9": "QF", "16-se-m10": "QF", "16-se-m11": "QF", "16-se-m12": "QF",
+  "16-se-m13": "SF", "16-se-m14": "SF",
+  "16-se-m15": "Final",
+};
+
 const InvitationalPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -134,7 +170,7 @@ const InvitationalPage = () => {
 
   const activeTab = useMemo((): InvitationalTab => {
     const t = searchParams.get("tab");
-    if (t === "8-double" || t === "8-single" || t === "4-double" || t === "4-single") return t;
+    if (t === "8-double" || t === "8-single" || t === "4-double" || t === "4-single" || t === "16-single") return t;
     return DEFAULT_TAB;
   }, [searchParams]);
 
@@ -157,6 +193,7 @@ const InvitationalPage = () => {
   const [score1, setScore1] = useState<number>(0);
   const [score2, setScore2] = useState<number>(0);
   const [raceTo, setRaceTo] = useState<number>(9);
+  const [playerSearch, setPlayerSearch] = useState<string>("");
   // Winner confirmation: when increment would reach raceTo and win, show popup before applying
   const [showWinnerConfirm, setShowWinnerConfirm] = useState(false);
   const [pendingWinner, setPendingWinner] = useState<"player1" | "player2" | null>(null);
@@ -170,6 +207,7 @@ const InvitationalPage = () => {
     if (tab === "8-single") return MATCH_IDS_8_SE;
     if (tab === "4-double") return MATCH_IDS_4_DE;
     if (tab === "4-single") return MATCH_IDS_4_SE;
+    if (tab === "16-single") return MATCH_IDS_16_SE;
     return [];
   }, []);
 
@@ -178,6 +216,7 @@ const InvitationalPage = () => {
     if (tab === "8-single") return ROUND_LABEL_8_SE[id] ?? "—";
     if (tab === "4-double") return ROUND_LABEL_4_DE[id] ?? "—";
     if (tab === "4-single") return ROUND_LABEL_4_SE[id] ?? "—";
+    if (tab === "16-single") return ROUND_LABEL_16_SE[id] ?? "—";
     return "—";
   }, []);
 
@@ -186,6 +225,7 @@ const InvitationalPage = () => {
     if (tab === "8-single") return "winners";
     if (tab === "4-double") return (["4-de-m1", "4-de-m2", "4-de-m3"].includes(id)) ? "winners" : "losers";
     if (tab === "4-single") return "winners";
+    if (tab === "16-single") return "winners";
     return "winners";
   }, []);
 
@@ -408,30 +448,55 @@ const InvitationalPage = () => {
     setPendingWinner(null);
   };
 
-  const renderMatchBox = (matchId: string, isLosers: boolean) => {
+  const renderMatchBox = (matchId: string, isLosers: boolean, wide = false) => {
     const match = getMatchById(matchId);
+    const winner = match?.winner;
     const hover = isLosers ? "hover:border-red-500" : "hover:border-blue-500";
     return (
       <div
         key={matchId}
-        className={`w-40 h-16 border-2 border-gray-300 rounded-lg bg-white px-2 py-px cursor-pointer ${hover} hover:shadow-md transition-all`}
+        className={`${
+          wide ? "w-[19.6rem] h-[4.4rem]" : "w-40 h-16"
+        } border-2 ${wide ? "border-slate-600 bg-slate-800" : "border-slate-500 bg-slate-100"} rounded-lg ${
+          wide ? "px-1" : "px-2"
+        } py-px cursor-pointer ${hover} hover:shadow-md transition-all`}
         onClick={() => handleMatchClick(matchId)}
       >
-        <div className="grid grid-cols-[1fr_3fr_1fr] gap-2 h-full">
+        <div className={`grid ${wide ? "grid-cols-[0.5fr_2.6fr_0.5fr]" : "grid-cols-[1fr_3fr_1fr]"} gap-2 h-full`}>
           <div className="flex items-center justify-center border-r border-gray-400">
-            <div className="text-sm text-gray-700 font-medium">{match?.matchNumber ?? matchId}</div>
+            <div
+              className={`font-medium ${wide ? "text-base text-slate-100" : "text-sm text-slate-700"}`}
+            >
+              {match?.matchNumber ?? matchId}
+            </div>
           </div>
           <div className="flex flex-col justify-center space-y-0 border-r border-gray-400">
             <div
-              className={`text-base text-center border-b border-gray-400 pb-1 font-medium ${
-                match?.winner === "player1" ? "text-yellow-600 font-bold" : "text-gray-800"
+              className={`text-center border-b border-gray-600 pb-1 font-medium ${
+                wide ? "text-lg" : "text-base"
+              } ${
+                winner === "player1"
+                  ? wide
+                    ? "bg-emerald-700/70 text-slate-50 font-bold"
+                    : "bg-emerald-100 text-emerald-900 font-bold"
+                  : wide
+                  ? "text-slate-100"
+                  : "text-slate-800"
               }`}
             >
               {match?.player1?.name ?? "TBD"}
             </div>
             <div
-              className={`text-base text-center pt-1 font-medium ${
-                match?.winner === "player2" ? "text-yellow-600 font-bold" : "text-gray-800"
+              className={`text-center pt-1 font-medium ${
+                wide ? "text-lg" : "text-base"
+              } ${
+                winner === "player2"
+                  ? wide
+                    ? "bg-emerald-700/70 text-slate-50 font-bold"
+                    : "bg-emerald-100 text-emerald-900 font-bold"
+                  : wide
+                  ? "text-slate-100"
+                  : "text-slate-800"
               }`}
             >
               {match?.player2?.name ?? "TBD"}
@@ -439,15 +504,31 @@ const InvitationalPage = () => {
           </div>
           <div className="flex flex-col justify-center space-y-0">
             <div
-              className={`text-base font-bold text-center border-b border-gray-400 pb-1 ${
-                match?.winner === "player1" ? "text-yellow-600" : "text-gray-800"
+              className={`font-bold text-center border-b border-gray-600 pb-1 ${
+                wide ? "text-lg" : "text-base"
+              } ${
+                winner === "player1"
+                  ? wide
+                    ? "bg-emerald-700/70 text-slate-50"
+                    : "bg-emerald-100 text-emerald-900"
+                  : wide
+                  ? "text-slate-100"
+                  : "text-slate-800"
               }`}
             >
               {match?.score1 ?? "-"}
             </div>
             <div
-              className={`text-base font-bold text-center pt-1 ${
-                match?.winner === "player2" ? "text-yellow-600" : "text-gray-800"
+              className={`font-bold text-center pt-1 ${
+                wide ? "text-lg" : "text-base"
+              } ${
+                winner === "player2"
+                  ? wide
+                    ? "bg-emerald-700/70 text-slate-50"
+                    : "bg-emerald-100 text-emerald-900"
+                  : wide
+                  ? "text-slate-100"
+                  : "text-slate-800"
               }`}
             >
               {match?.score2 ?? "-"}
@@ -601,6 +682,17 @@ const InvitationalPage = () => {
       await persistMatches(updatedIds);
     }
 
+    if (isCompleted && player1 && player2 && activeTab === "16-single") {
+      const adv = ADVANCEMENT_16_SE[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1 : player2;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      await persistMatches(updatedIds);
+    }
+
     if (isCompleted && player1 && player2 && activeTab === "4-double") {
       const adv = ADVANCEMENT_4_DE[selectedMatch.id];
       const winnerPlayer = winner === "player1" ? player1 : player2;
@@ -714,6 +806,12 @@ const InvitationalPage = () => {
         return m3.winner === "player1" ? m3.player1 : m3.player2;
       return null;
     }
+    if (tab === "16-single") {
+      const m15 = matchList.find((m) => m.id === "16-se-m15");
+      if (m15?.status === "completed" && m15.winner && m15.player1 && m15.player2)
+        return m15.winner === "player1" ? m15.player1 : m15.player2;
+      return null;
+    }
     return null;
   }, []);
 
@@ -721,9 +819,9 @@ const InvitationalPage = () => {
 
   if (loading || authLoading) {
     return (
-      <div className="p-3 bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="p-3 bg-slate-900 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-lg font-semibold text-gray-800">
+          <div className="text-lg font-semibold text-slate-100">
             Loading tournament...
           </div>
         </div>
@@ -731,14 +829,23 @@ const InvitationalPage = () => {
     );
   }
 
-  const formatLabel = activeTab === "8-double" ? "8-Player Double Elimination" : activeTab === "8-single" ? "8-Player Single Elimination" : activeTab === "4-double" ? "4-Player Double Elimination" : "4-Player Single Elimination";
+  const formatLabel =
+    activeTab === "8-double"
+      ? "8-Player Double Elimination"
+      : activeTab === "8-single"
+      ? "8-Player Single Elimination"
+      : activeTab === "4-double"
+      ? "4-Player Double Elimination"
+      : activeTab === "4-single"
+      ? "4-Player Single Elimination"
+      : "16-Player Single Elimination";
 
   return (
-    <div className="p-3 bg-gray-50 min-h-screen">
+    <div className="p-3 bg-slate-900 min-h-screen text-slate-100">
       <div className="max-w-7xl mx-auto">
         <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Invitational</h1>
-          <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-2">
+          <h1 className="text-2xl font-bold text-slate-50 mb-3">Invitational</h1>
+          <div className="flex flex-wrap gap-1 border-b border-slate-700 pb-2">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -747,7 +854,7 @@ const InvitationalPage = () => {
                 className={`px-3 py-1.5 rounded-t text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "bg-amber-500 text-amber-950"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    : "bg-slate-700 text-slate-100 hover:bg-slate-600"
                 }`}
               >
                 {tab.label}
@@ -757,7 +864,7 @@ const InvitationalPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <span className="text-sm text-gray-600">{formatLabel}</span>
+          <span className="text-sm text-slate-300">{formatLabel}</span>
           <div className="flex items-center gap-2">
             {matches.length > 0 && (
               <button
@@ -772,7 +879,7 @@ const InvitationalPage = () => {
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(true)}
-                className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+                className="rounded-md border border-red-500 bg-slate-900 px-3 py-1.5 text-sm font-medium text-red-300 hover:bg-red-950"
               >
                 Reset bracket
               </button>
@@ -792,15 +899,15 @@ const InvitationalPage = () => {
         {showResetConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="mx-4 w-full max-w-sm rounded-lg bg-white p-5 shadow-lg">
-              <p className="text-gray-800 font-medium mb-1">Reset this bracket?</p>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-slate-100 font-medium mb-1">Reset this bracket?</p>
+              <p className="text-sm text-slate-300 mb-4">
                 All matches for this format will be cleared. Other tabs are not affected.
               </p>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowResetConfirm(false)}
-                  className="flex-1 rounded-md border border-gray-300 bg-white py-2 text-gray-700 hover:bg-gray-50"
+                  className="flex-1 rounded-md border border-slate-500 bg-slate-900 py-2 text-slate-100 hover:bg-slate-800"
                 >
                   Cancel
                 </button>
@@ -824,24 +931,24 @@ const InvitationalPage = () => {
               <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">
                 WB
               </div>
-              <h2 className="text-lg font-bold text-gray-900">Winners Bracket</h2>
+              <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
             </div>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[300px]">
                 <div className="flex flex-col min-h-[250px]">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">WB R1</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {["8-de-m1", "8-de-m2", "8-de-m3", "8-de-m4"].map((id) => renderMatchBox(id, false))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">WB R2</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {["8-de-m5", "8-de-m6"].map((id) => renderMatchBox(id, false))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">WB Final</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {renderMatchBox("8-de-m7", false)}
                   </div>
@@ -858,30 +965,30 @@ const InvitationalPage = () => {
               <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">
                 LB
               </div>
-              <h2 className="text-lg font-bold text-gray-900">Losers Bracket</h2>
+              <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
             </div>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[300px]">
                 <div className="flex flex-col min-h-[250px]">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R1</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {["8-de-m8", "8-de-m9"].map((id) => renderMatchBox(id, true))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R2</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {["8-de-m10", "8-de-m11"].map((id) => renderMatchBox(id, true))}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R3</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {renderMatchBox("8-de-m12", true)}
                   </div>
                 </div>
                 <div className="flex flex-col min-h-[250px]">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB Final</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {renderMatchBox("8-de-m13", true)}
                   </div>
@@ -898,7 +1005,7 @@ const InvitationalPage = () => {
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">
                 Finals
               </div>
-              <h2 className="text-lg font-bold text-gray-900">Grand Final &amp; Bracket Reset</h2>
+              <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
             </div>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 min-w-max pb-2 items-center">
@@ -915,24 +1022,24 @@ const InvitationalPage = () => {
         <div className="flex flex-col space-y-2">
           <div className="flex items-center mb-2">
             <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">SE</div>
-            <h2 className="text-lg font-bold text-gray-900">8-Player Single Elimination</h2>
+            <h2 className="text-lg font-bold text-slate-100">8-Player Single Elimination</h2>
           </div>
           <div className="overflow-x-auto">
             <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[280px]">
               <div className="flex flex-col min-h-[200px]">
-                <div className="text-center font-bold text-sm text-gray-800 mb-2">R1</div>
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">R1</div>
                 <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                   {["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4"].map((id) => renderMatchBox(id, false))}
                 </div>
               </div>
               <div className="flex flex-col min-h-[200px]">
-                <div className="text-center font-bold text-sm text-gray-800 mb-2">Semis</div>
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">Semis</div>
                 <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                   {["8-se-m5", "8-se-m6"].map((id) => renderMatchBox(id, false))}
                 </div>
               </div>
               <div className="flex flex-col min-h-[200px]">
-                <div className="text-center font-bold text-sm text-gray-800 mb-2">Final</div>
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">Final</div>
                 <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                   {renderMatchBox("8-se-m7", false)}
                 </div>
@@ -948,18 +1055,18 @@ const InvitationalPage = () => {
           <div className="w-full">
             <div className="flex items-center mb-2">
               <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
-              <h2 className="text-lg font-bold text-gray-900">Winners Bracket</h2>
+              <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
             </div>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 min-w-max pb-2 items-center">
                 <div className="flex flex-col">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">WB R1</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
                   <div className="flex flex-col space-y-1">
                     {["4-de-m1", "4-de-m2"].map((id) => renderMatchBox(id, false))}
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">WB Final</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
                   <div className="flex flex-col space-y-1">{renderMatchBox("4-de-m3", false)}</div>
                 </div>
               </div>
@@ -969,16 +1076,16 @@ const InvitationalPage = () => {
           <div className="w-full">
             <div className="flex items-center mb-2">
               <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
-              <h2 className="text-lg font-bold text-gray-900">Losers Bracket</h2>
+              <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
             </div>
             <div className="overflow-x-auto">
               <div className="flex space-x-4 min-w-max pb-2 items-center">
                 <div className="flex flex-col">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB R1</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
                   <div className="flex flex-col space-y-1">{renderMatchBox("4-de-m4", true)}</div>
                 </div>
                 <div className="flex flex-col">
-                  <div className="text-center font-bold text-sm text-gray-800 mb-2">LB Final</div>
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
                   <div className="flex flex-col space-y-1">{renderMatchBox("4-de-m5", true)}</div>
                 </div>
               </div>
@@ -988,7 +1095,7 @@ const InvitationalPage = () => {
           <div className="w-full">
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
-              <h2 className="text-lg font-bold text-gray-900">Grand Final &amp; Bracket Reset</h2>
+              <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
               {canEdit && (
                 <button
                   type="button"
@@ -1015,19 +1122,70 @@ const InvitationalPage = () => {
         <div className="flex flex-col space-y-2">
           <div className="flex items-center mb-2">
             <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">SE</div>
-            <h2 className="text-lg font-bold text-gray-900">4-Player Single Elimination</h2>
+            <h2 className="text-lg font-bold text-slate-100">4-Player Single Elimination</h2>
           </div>
           <div className="overflow-x-auto">
             <div className="flex space-x-4 min-w-max pb-2 items-center">
               <div className="flex flex-col">
-                <div className="text-center font-bold text-sm text-gray-800 mb-2">Semis</div>
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">Semis</div>
                 <div className="flex flex-col space-y-1">
                   {["4-se-m1", "4-se-m2"].map((id) => renderMatchBox(id, false))}
                 </div>
               </div>
               <div className="flex flex-col">
-                <div className="text-center font-bold text-sm text-gray-800 mb-2">Final</div>
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">Final</div>
                 <div className="flex flex-col space-y-1">{renderMatchBox("4-se-m3", false)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* 16 Single: R1 → QF → SF → Final (wide slots) */}
+        {activeTab === "16-single" && (
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center mb-2">
+            <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">SE</div>
+            <h2 className="text-lg font-bold text-slate-100">16-Player Single Elimination (Wide)</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="flex space-x-2 min-w-max pb-2 items-center min-h-[320px]">
+              <div className="flex flex-col min-h-[260px]">
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">R1</div>
+                <div className="flex flex-col space-y-3 items-center justify-center flex-1">
+                  {["16-se-m1","16-se-m2","16-se-m3","16-se-m4","16-se-m5","16-se-m6","16-se-m7","16-se-m8"].map((id) =>
+                    renderMatchBox(id, false, true)
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col min-h-[260px]">
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">QF</div>
+                <div className="flex flex-col items-center justify-center flex-1">
+                  <div className="mb-6">
+                    {renderMatchBox("16-se-m9", false, true)}
+                  </div>
+                  <div className="my-9">
+                    {renderMatchBox("16-se-m10", false, true)}
+                  </div>
+                  <div className="my-9">
+                    {renderMatchBox("16-se-m11", false, true)}
+                  </div>
+                  <div className="mt-6">
+                    {renderMatchBox("16-se-m12", false, true)}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col min-h-[260px]">
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">SF</div>
+                <div className="flex flex-col space-y-48 items-center justify-center flex-1">
+                  {["16-se-m13","16-se-m14"].map((id) => renderMatchBox(id, false, true))}
+                </div>
+              </div>
+              <div className="flex flex-col min-h-[260px]">
+                <div className="text-center font-bold text-sm text-slate-200 mb-2">Final</div>
+                <div className="flex flex-col space-y-3 items-center justify-center flex-1">
+                  {renderMatchBox("16-se-m15", false, true)}
+                </div>
               </div>
             </div>
           </div>
@@ -1038,14 +1196,14 @@ const InvitationalPage = () => {
       {/* Match Input Modal */}
       {isModalOpen && selectedMatch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+          <div className="bg-slate-900 rounded-lg p-6 w-96 max-w-md mx-4 border border-slate-600">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
+              <h3 className="text-lg font-bold text-slate-100">
                 {selectedMatch.matchNumber} - {selectedMatch.round}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-800 font-medium hover:text-gray-800"
+                className="text-slate-300 font-medium hover:text-slate-100"
               >
                 ✕
               </button>
@@ -1055,26 +1213,58 @@ const InvitationalPage = () => {
               {/* Player selection: editable only in first-round matches per format; after that show names read-only */}
               {(() => {
                 const firstRoundIds: string[] =
-                  activeTab === "8-double" ? ["8-de-m1", "8-de-m2", "8-de-m3", "8-de-m4"]
-                  : activeTab === "8-single" ? ["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4"]
-                  : activeTab === "4-double" ? ["4-de-m1", "4-de-m2"]
-                  : activeTab === "4-single" ? ["4-se-m1", "4-se-m2"]
-                  : [];
+                  activeTab === "8-double"
+                    ? ["8-de-m1", "8-de-m2", "8-de-m3", "8-de-m4"]
+                    : activeTab === "8-single"
+                    ? ["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4"]
+                    : activeTab === "4-double"
+                    ? ["4-de-m1", "4-de-m2"]
+                    : activeTab === "4-single"
+                    ? ["4-se-m1", "4-se-m2"]
+                    : activeTab === "16-single"
+                    ? ["16-se-m1","16-se-m2","16-se-m3","16-se-m4","16-se-m5","16-se-m6","16-se-m7","16-se-m8"]
+                    : [];
                 const isFirstRound = selectedMatch && firstRoundIds.includes(selectedMatch.id);
                 const name1 = players.find((p) => p.id === selectedPlayer1)?.name ?? "Player 1";
                 const name2 = players.find((p) => p.id === selectedPlayer2)?.name ?? "Player 2";
+                const searchLower = playerSearch.trim().toLowerCase();
+                const filteredPlayers = searchLower
+                  ? players.filter((p) => p.name.toLowerCase().includes(searchLower))
+                  : players;
                 if (isFirstRound) {
                   return (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Player 1</label>
+                        <label className="block text-sm font-medium text-slate-200 mb-1">Search players</label>
+                        <div className="flex gap-1">
+                          <input
+                            type="text"
+                            value={playerSearch}
+                            onChange={(e) => setPlayerSearch(e.target.value)}
+                            className="flex-1 border border-slate-600 rounded-md px-3 py-1.5 text-slate-100 text-sm bg-slate-800"
+                            placeholder="Type to filter names..."
+                          />
+                          {playerSearch && (
+                            <button
+                              type="button"
+                              onClick={() => setPlayerSearch("")}
+                              className="px-2 py-1 rounded-md border border-slate-500 bg-slate-700 text-xs text-slate-100 hover:bg-slate-600"
+                              title="Clear search"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-200 mb-1">Player 1</label>
                         <select
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                          className="w-full border border-slate-600 rounded-md px-3 py-2 text-slate-100 bg-slate-800"
                           value={selectedPlayer1}
                           onChange={(e) => setSelectedPlayer1(e.target.value)}
                         >
                           <option value="">Select Player</option>
-                          {players
+                          {filteredPlayers
                             .filter((p) => p.id !== selectedPlayer2)
                             .map((p) => (
                               <option key={p.id} value={p.id}>{p.name}</option>
@@ -1082,14 +1272,14 @@ const InvitationalPage = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Player 2</label>
+                        <label className="block text-sm font-medium text-slate-200 mb-1">Player 2</label>
                         <select
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                          className="w-full border border-slate-600 rounded-md px-3 py-2 text-slate-100 bg-slate-800"
                           value={selectedPlayer2}
                           onChange={(e) => setSelectedPlayer2(e.target.value)}
                         >
                           <option value="">Select Player</option>
-                          {players
+                          {filteredPlayers
                             .filter((p) => p.id !== selectedPlayer1)
                             .map((p) => (
                               <option key={p.id} value={p.id}>{p.name}</option>
@@ -1101,10 +1291,10 @@ const InvitationalPage = () => {
                 }
                 return (
                   <div className="flex gap-4 text-sm">
-                    <div className="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800 font-medium">
+                    <div className="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 font-medium">
                       {name1}
                     </div>
-                    <div className="flex-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800 font-medium">
+                    <div className="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 font-medium">
                       {name2}
                     </div>
                   </div>
@@ -1113,12 +1303,12 @@ const InvitationalPage = () => {
 
               {/* Race to X - preserved */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Race to X</label>
+                <label className="block text-sm font-medium text-slate-200 mb-1">Race to X</label>
                 <input
                   type="number"
                   min="1"
                   max="21"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900"
+                  className="w-full border border-slate-600 rounded-md px-3 py-2 text-slate-100 bg-slate-800"
                   value={raceTo}
                   onChange={(e) => setRaceTo(parseInt(e.target.value) || 9)}
                 />
@@ -1131,24 +1321,24 @@ const InvitationalPage = () => {
                 return (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{name1}</label>
+                      <label className="block text-sm font-medium text-slate-200 mb-1">{name1}</label>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={handleDecrementScore1}
-                          className="w-10 h-10 rounded-md border-2 border-gray-300 bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 disabled:opacity-50 disabled:pointer-events-none"
+                          className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700 disabled:opacity-50 disabled:pointer-events-none"
                           disabled={score1 <= 0}
                           aria-label={`Decrement ${name1}`}
                         >
                           −
                         </button>
-                        <span className="min-w-[3rem] text-center text-lg font-bold text-gray-900">
+                        <span className="min-w-[3rem] text-center text-lg font-bold text-slate-100">
                           {score1}
                         </span>
                         <button
                           type="button"
                           onClick={handleIncrementScore1}
-                          className="w-10 h-10 rounded-md border-2 border-gray-300 bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 disabled:opacity-50 disabled:pointer-events-none"
+                          className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700 disabled:opacity-50 disabled:pointer-events-none"
                           disabled={score1 >= raceTo}
                           aria-label={`Increment ${name1}`}
                         >
@@ -1157,24 +1347,24 @@ const InvitationalPage = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{name2}</label>
+                      <label className="block text-sm font-medium text-slate-200 mb-1">{name2}</label>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={handleDecrementScore2}
-                          className="w-10 h-10 rounded-md border-2 border-gray-300 bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 disabled:opacity-50 disabled:pointer-events-none"
+                          className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700 disabled:opacity-50 disabled:pointer-events-none"
                           disabled={score2 <= 0}
                           aria-label={`Decrement ${name2}`}
                         >
                           −
                         </button>
-                        <span className="min-w-[3rem] text-center text-lg font-bold text-gray-900">
+                        <span className="min-w-[3rem] text-center text-lg font-bold text-slate-100">
                           {score2}
                         </span>
                         <button
                           type="button"
                           onClick={handleIncrementScore2}
-                          className="w-10 h-10 rounded-md border-2 border-gray-300 bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 disabled:opacity-50 disabled:pointer-events-none"
+                          className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700 disabled:opacity-50 disabled:pointer-events-none"
                           disabled={score2 >= raceTo}
                           aria-label={`Increment ${name2}`}
                         >
@@ -1189,10 +1379,10 @@ const InvitationalPage = () => {
               {/* Winner confirmation popup (inside modal) */}
               {showWinnerConfirm && pendingWinner && (
                 <div className="rounded-lg border-2 border-amber-500 bg-amber-50 p-4">
-                  <p className="text-sm font-medium text-gray-800 mb-1">
+                  <p className="text-sm font-medium text-slate-100 mb-1">
                     Confirm winner
                   </p>
-                  <p className="text-gray-700 mb-3">
+                  <p className="text-slate-300 mb-3">
                     {pendingWinner === "player1"
                       ? players.find((p) => p.id === selectedPlayer1)?.name ?? "Player 1"
                       : players.find((p) => p.id === selectedPlayer2)?.name ?? "Player 2"}{" "}
@@ -1202,7 +1392,7 @@ const InvitationalPage = () => {
                     <button
                       type="button"
                       onClick={cancelWinnerConfirm}
-                      className="flex-1 py-2 px-3 rounded-md border border-gray-400 bg-white text-gray-700 hover:bg-gray-50"
+                      className="flex-1 py-2 px-3 rounded-md border border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
                     >
                       Cancel
                     </button>
@@ -1221,7 +1411,7 @@ const InvitationalPage = () => {
               <div className="flex space-x-3 pt-4">
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
+                  className="flex-1 bg-slate-700 text-white py-2 px-4 rounded-md hover:bg-slate-600 transition-colors"
                 >
                   Cancel
                 </button>
