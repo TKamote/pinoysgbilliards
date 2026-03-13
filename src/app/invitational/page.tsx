@@ -1160,24 +1160,15 @@ const InvitationalPage = () => {
               </div>
               <div className="flex flex-col min-h-[260px]">
                 <div className="text-center font-bold text-sm text-slate-200 mb-2">QF</div>
-                <div className="flex flex-col items-center justify-center flex-1">
-                  <div className="mb-6">
-                    {renderMatchBox("16-se-m9", false, true)}
-                  </div>
-                  <div className="my-9">
-                    {renderMatchBox("16-se-m10", false, true)}
-                  </div>
-                  <div className="my-9">
-                    {renderMatchBox("16-se-m11", false, true)}
-                  </div>
-                  <div className="mt-6">
-                    {renderMatchBox("16-se-m12", false, true)}
-                  </div>
+                <div className="flex flex-col items-center justify-center flex-1 space-y-24">
+                  {["16-se-m9","16-se-m10","16-se-m11","16-se-m12"].map((id) =>
+                    renderMatchBox(id, false, true)
+                  )}
                 </div>
               </div>
               <div className="flex flex-col min-h-[260px]">
                 <div className="text-center font-bold text-sm text-slate-200 mb-2">SF</div>
-                <div className="flex flex-col space-y-48 items-center justify-center flex-1">
+                <div className="flex flex-col space-y-[15.8rem] items-center justify-center flex-1">
                   {["16-se-m13","16-se-m14"].map((id) => renderMatchBox(id, false, true))}
                 </div>
               </div>
