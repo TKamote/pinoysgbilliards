@@ -647,8 +647,8 @@ const PbsTourPage = () => {
         </button>
         <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }} title="Select Logo" />
 
-        {/* Players Scoring Container - Bottom - 70% width on desktop for YouTube Shorts margin; overflow-visible for enlarged photo experiment */}
-        <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
+        {/* Players Scoring Container - Bottom - 85% width on desktop for YouTube Shorts margin; overflow-visible for enlarged photo experiment */}
+        <div className="mt-auto w-full md:w-[85%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           {/* Player 1 Section - Dark Indigo: Photo | Name | Score (photo 2x size, overflow visible) */}
           <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
             {/* Player 1 Profile Photo - 2x (100%) enlargement, allowed to overflow */}
@@ -658,7 +658,7 @@ const PbsTourPage = () => {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -701,7 +701,7 @@ const PbsTourPage = () => {
                   : "cursor-default"
               } transition-colors px-2`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
+              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
                 {getPlayer1Name()}
               </div>
             </button>
@@ -796,7 +796,7 @@ const PbsTourPage = () => {
                   : "cursor-default"
               } transition-colors px-2`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
+              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
                 {getPlayer2Name()}
               </div>
             </button>
@@ -808,7 +808,7 @@ const PbsTourPage = () => {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"

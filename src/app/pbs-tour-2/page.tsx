@@ -647,8 +647,8 @@ const PbsTour2Page = () => {
         </button>
         <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }} title="Select Logo" />
 
-        {/* Players Scoring Container - Bottom - 90% width on desktop; overflow-visible for enlarged photo */}
-        <div className="mt-auto w-full md:w-[90%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
+        {/* Players Scoring Container - Bottom - 85% width on desktop; overflow-visible for enlarged photo */}
+        <div className="mt-auto w-full md:w-[85%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           {/* Player 1 Section - Dark Indigo: Photo | Name | Score (photo 2x size, overflow visible) */}
           <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
             {/* Player 1 Profile Photo - 2x (100%) enlargement, allowed to overflow */}

@@ -38,8 +38,10 @@ const LiveGenericPage = () => {
   const [showRaceToInput, setShowRaceToInput] = useState(false);
   const [tempRaceTo, setTempRaceTo] = useState("7");
   const [logo1URL, setLogo1URL] = useState<string>(DEFAULT_LOGO);
+  const [logo2URL, setLogo2URL] = useState<string>(DEFAULT_LOGO);
   const [logos, setLogos] = useState<Logo[]>([]);
   const [showLogo1Modal, setShowLogo1Modal] = useState(false);
+  const [showLogo2Modal, setShowLogo2Modal] = useState(false);
   const { isLive, setIsLive, gameMode, setGameMode } = useLive();
   const { isManager } = useAuth();
 
@@ -143,7 +145,11 @@ const LiveGenericPage = () => {
       try {
         const configRef = doc(db, "config", ARYS_CONFIG_ID);
         const snap = await getDoc(configRef);
-        if (snap.exists() && snap.data()?.logo1URL) setLogo1URL(snap.data()!.logo1URL);
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d?.logo1URL) setLogo1URL(d.logo1URL);
+          if (d?.logo2URL) setLogo2URL(d.logo2URL);
+        }
       } catch (e) {
         console.error("Error loading logo config:", e);
       }
@@ -167,10 +173,11 @@ const LiveGenericPage = () => {
     fetchLogos();
   }, []);
 
-  const handleSelectLogo = (logo: Logo) => {
+  const handleSelectLogo = (slot: 1 | 2, logo: Logo) => {
     const url = logo.logoURL || "";
-    setLogo1URL(url);
-    setDoc(doc(db, "config", ARYS_CONFIG_ID), { logo1URL: url }, { merge: true }).catch(console.error);
+    if (slot === 1) setLogo1URL(url);
+    else setLogo2URL(url);
+    setDoc(doc(db, "config", ARYS_CONFIG_ID), slot === 1 ? { logo1URL: url } : { logo2URL: url }, { merge: true }).catch(console.error);
   };
 
   // Load persisted match data from Firestore
@@ -615,14 +622,36 @@ const LiveGenericPage = () => {
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
       <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
-        {/* Logo - Top Left; pick from Players tab */}
-        <button type="button" onClick={() => canSelectPlayers && setShowLogo1Modal(true)} className={`absolute top-4 left-4 z-10 text-left ${canSelectPlayers ? "cursor-pointer hover:opacity-90" : "cursor-default"}`} style={{ top: "80px", left: "30px" }} title={canSelectPlayers ? "Pick logo from Players tab" : ""}>
-          <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-[50%] overflow-hidden border-2 border-white bg-white shadow flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logo1URL || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
-          </div>
-        </button>
-        <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }} title="Select Logo" />
+        {/* Two logos - Top Left, same layout as Tour Manager (2-Logos-Team); pick from Players tab */}
+        <div
+          className="absolute flex gap-2 z-10 items-start"
+          style={{ top: "80px", left: "30px", flexDirection: "column" }}
+        >
+          <button
+            type="button"
+            onClick={() => canSelectPlayers && setShowLogo1Modal(true)}
+            className={`text-left ${canSelectPlayers ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
+            title={canSelectPlayers ? "Click to pick logo from Players tab" : ""}
+          >
+            <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-[50%] overflow-hidden border-2 border-white bg-white shadow flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logo1URL || DEFAULT_LOGO} alt="Logo 1" className="w-full h-full object-contain" />
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => canSelectPlayers && setShowLogo2Modal(true)}
+            className={`text-left ${canSelectPlayers ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
+            title={canSelectPlayers ? "Click to pick logo from Players tab" : ""}
+          >
+            <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-[50%] overflow-hidden border-2 border-white bg-white shadow flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logo2URL || DEFAULT_LOGO} alt="Logo 2" className="w-full h-full object-contain" />
+            </div>
+          </button>
+        </div>
+        <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(1, logo); setShowLogo1Modal(false); }} title="Select Logo 1" />
+        <LogoSelectionModal isOpen={showLogo2Modal} onClose={() => setShowLogo2Modal(false)} logos={logos} selectedLogoURL={logo2URL || null} onSelect={(logo) => { handleSelectLogo(2, logo); setShowLogo2Modal(false); }} title="Select Logo 2" />
         {/* Live Button - Top Right Corner */}
         <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">
           <button
@@ -637,9 +666,8 @@ const LiveGenericPage = () => {
           </button>
         </div>
 
-        {/* Players Scoring Container - Bottom - 70% width on desktop; 2x photos, overflow visible */}
-        <div className="mt-auto w-full flex justify-center">
-          <div className="w-full md:w-[70%] flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
+        {/* Players Scoring Container - Bottom - 85% width on desktop; 2x photos, overflow visible */}
+        <div className="mt-auto w-full md:w-[85%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           {/* Player 1 Section - Red Background */}
           <div className="bg-red-700 flex items-center h-12 sm:h-14 md:h-16 overflow-visible">
             {/* Player 1 Profile Photo - 2x size */}
@@ -649,7 +677,7 @@ const LiveGenericPage = () => {
                   setShowPlayer1Modal(true);
                 }
               }}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -692,7 +720,7 @@ const LiveGenericPage = () => {
                   : "cursor-default"
               } transition-colors`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
                 {getPlayer1Name()}
               </div>
             </button>
@@ -779,7 +807,7 @@ const LiveGenericPage = () => {
                   : "cursor-default"
               } transition-colors`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate max-w-[60px] sm:max-w-[80px] md:max-w-none">
+              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
                 {getPlayer2Name()}
               </div>
             </button>
@@ -791,7 +819,7 @@ const LiveGenericPage = () => {
                   setShowPlayer2Modal(true);
                 }
               }}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
+              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 transition-all duration-300 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white ${
                 canSelectPlayers
                   ? "cursor-pointer hover:opacity-80"
                   : "cursor-default"
@@ -820,7 +848,6 @@ const LiveGenericPage = () => {
                 />
               )}
             </button>
-          </div>
           </div>
         </div>
 

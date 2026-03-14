@@ -14,9 +14,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUsage } from "@/contexts/UsageContext";
 import TournamentWinnerModal from "@/components/TournamentWinnerModal";
 
-export type InvitationalTab = "8-double" | "8-single" | "4-double" | "4-single" | "16-single";
+export type InvitationalTab = "8-double" | "8-double-bracket-a" | "8-double-bracket-b" | "8-double-bracket-c" | "8-double-bracket-d" | "8-single" | "4-double" | "4-single" | "16-single";
 const TABS: { id: InvitationalTab; label: string }[] = [
   { id: "8-double", label: "8 Double" },
+  { id: "8-double-bracket-a", label: "8D- Bracket A" },
+  { id: "8-double-bracket-b", label: "8D- Bracket B" },
+  { id: "8-double-bracket-c", label: "8D- Bracket C" },
+  { id: "8-double-bracket-d", label: "8D- Bracket D" },
   { id: "8-single", label: "8 Single" },
   { id: "4-double", label: "4 Double" },
   { id: "4-single", label: "4 Single" },
@@ -79,6 +83,73 @@ const ROUND_LABEL_8_DE: Record<string, string> = {
   "8-de-m8": "LB R1", "8-de-m9": "LB R1", "8-de-m10": "LB R2", "8-de-m11": "LB R2",
   "8-de-m12": "LB R3", "8-de-m13": "LB Final", "8-de-m14": "Grand Final", "8-de-m15": "Bracket Reset",
 };
+
+// 8D- Bracket A: same structure as 8 Double, own match ids (8de-a-m1 … 8de-a-m15)
+const MATCH_IDS_8_DE_BA = ["8de-a-m1", "8de-a-m2", "8de-a-m3", "8de-a-m4", "8de-a-m5", "8de-a-m6", "8de-a-m7", "8de-a-m8", "8de-a-m9", "8de-a-m10", "8de-a-m11", "8de-a-m12", "8de-a-m13", "8de-a-m14", "8de-a-m15"] as const;
+
+const ADVANCEMENT_8_DE_BA: Record<
+  string,
+  { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }
+> = {
+  "8de-a-m1": { winner: { nextId: "8de-a-m5", slot: "player1" }, loser: { nextId: "8de-a-m8", slot: "player1" } },
+  "8de-a-m2": { winner: { nextId: "8de-a-m5", slot: "player2" }, loser: { nextId: "8de-a-m8", slot: "player2" } },
+  "8de-a-m3": { winner: { nextId: "8de-a-m6", slot: "player1" }, loser: { nextId: "8de-a-m9", slot: "player1" } },
+  "8de-a-m4": { winner: { nextId: "8de-a-m6", slot: "player2" }, loser: { nextId: "8de-a-m9", slot: "player2" } },
+  "8de-a-m5": { winner: { nextId: "8de-a-m7", slot: "player1" }, loser: { nextId: "8de-a-m10", slot: "player1" } },
+  "8de-a-m6": { winner: { nextId: "8de-a-m7", slot: "player2" }, loser: { nextId: "8de-a-m11", slot: "player1" } },
+  "8de-a-m7": { winner: { nextId: "8de-a-m14", slot: "player1" }, loser: { nextId: "8de-a-m13", slot: "player1" } },
+  "8de-a-m8": { winner: { nextId: "8de-a-m10", slot: "player2" } },
+  "8de-a-m9": { winner: { nextId: "8de-a-m11", slot: "player2" } },
+  "8de-a-m10": { winner: { nextId: "8de-a-m12", slot: "player1" } },
+  "8de-a-m11": { winner: { nextId: "8de-a-m12", slot: "player2" } },
+  "8de-a-m12": { winner: { nextId: "8de-a-m13", slot: "player2" } },
+  "8de-a-m13": { winner: { nextId: "8de-a-m14", slot: "player2" } },
+  "8de-a-m15": {},
+};
+
+const ROUND_LABEL_8_DE_BA: Record<string, string> = {
+  "8de-a-m1": "WB R1", "8de-a-m2": "WB R1", "8de-a-m3": "WB R1", "8de-a-m4": "WB R1",
+  "8de-a-m5": "WB R2", "8de-a-m6": "WB R2", "8de-a-m7": "WB Final",
+  "8de-a-m8": "LB R1", "8de-a-m9": "LB R1", "8de-a-m10": "LB R2", "8de-a-m11": "LB R2",
+  "8de-a-m12": "LB R3", "8de-a-m13": "LB Final", "8de-a-m14": "Grand Final", "8de-a-m15": "Bracket Reset",
+};
+
+function make8DeBracketConstants(prefix: string) {
+  const ids = ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11", "m12", "m13", "m14", "m15"] as const;
+  const matchIds = ids.map((m) => `${prefix}-${m}`) as unknown as readonly [string, ...string[]];
+  const adv: Record<string, { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }> = {};
+  ids.forEach((m, i) => {
+    const id = `${prefix}-${m}`;
+    if (m === "m1") adv[id] = { winner: { nextId: `${prefix}-m5`, slot: "player1" }, loser: { nextId: `${prefix}-m8`, slot: "player1" } };
+    else if (m === "m2") adv[id] = { winner: { nextId: `${prefix}-m5`, slot: "player2" }, loser: { nextId: `${prefix}-m8`, slot: "player2" } };
+    else if (m === "m3") adv[id] = { winner: { nextId: `${prefix}-m6`, slot: "player1" }, loser: { nextId: `${prefix}-m9`, slot: "player1" } };
+    else if (m === "m4") adv[id] = { winner: { nextId: `${prefix}-m6`, slot: "player2" }, loser: { nextId: `${prefix}-m9`, slot: "player2" } };
+    else if (m === "m5") adv[id] = { winner: { nextId: `${prefix}-m7`, slot: "player1" }, loser: { nextId: `${prefix}-m10`, slot: "player1" } };
+    else if (m === "m6") adv[id] = { winner: { nextId: `${prefix}-m7`, slot: "player2" }, loser: { nextId: `${prefix}-m11`, slot: "player1" } };
+    else if (m === "m7") adv[id] = { winner: { nextId: `${prefix}-m14`, slot: "player1" }, loser: { nextId: `${prefix}-m13`, slot: "player1" } };
+    else if (m === "m8") adv[id] = { winner: { nextId: `${prefix}-m10`, slot: "player2" } };
+    else if (m === "m9") adv[id] = { winner: { nextId: `${prefix}-m11`, slot: "player2" } };
+    else if (m === "m10") adv[id] = { winner: { nextId: `${prefix}-m12`, slot: "player1" } };
+    else if (m === "m11") adv[id] = { winner: { nextId: `${prefix}-m12`, slot: "player2" } };
+    else if (m === "m12") adv[id] = { winner: { nextId: `${prefix}-m13`, slot: "player2" } };
+    else if (m === "m13") adv[id] = { winner: { nextId: `${prefix}-m14`, slot: "player2" } };
+    else if (m === "m14" || m === "m15") adv[id] = {};
+  });
+  const roundLabels: Record<string, string> = {};
+  ["m1", "m2", "m3", "m4"].forEach((m) => { roundLabels[`${prefix}-${m}`] = "WB R1"; });
+  ["m5", "m6"].forEach((m) => { roundLabels[`${prefix}-${m}`] = "WB R2"; });
+  roundLabels[`${prefix}-m7`] = "WB Final";
+  ["m8", "m9"].forEach((m) => { roundLabels[`${prefix}-${m}`] = "LB R1"; });
+  ["m10", "m11"].forEach((m) => { roundLabels[`${prefix}-${m}`] = "LB R2"; });
+  roundLabels[`${prefix}-m12`] = "LB R3";
+  roundLabels[`${prefix}-m13`] = "LB Final";
+  roundLabels[`${prefix}-m14`] = "Grand Final";
+  roundLabels[`${prefix}-m15`] = "Bracket Reset";
+  return { matchIds, adv, roundLabels };
+}
+const BRACKET_B = make8DeBracketConstants("8de-b");
+const BRACKET_C = make8DeBracketConstants("8de-c");
+const BRACKET_D = make8DeBracketConstants("8de-d");
 
 // 8-player single elimination: 7 matches (R1 → Semis → Final)
 const MATCH_IDS_8_SE = ["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4", "8-se-m5", "8-se-m6", "8-se-m7"] as const;
@@ -170,7 +241,7 @@ const InvitationalPage = () => {
 
   const activeTab = useMemo((): InvitationalTab => {
     const t = searchParams.get("tab");
-    if (t === "8-double" || t === "8-single" || t === "4-double" || t === "4-single" || t === "16-single") return t;
+    if (t === "8-double" || t === "8-double-bracket-a" || t === "8-double-bracket-b" || t === "8-double-bracket-c" || t === "8-double-bracket-d" || t === "8-single" || t === "4-double" || t === "4-single" || t === "16-single") return t;
     return DEFAULT_TAB;
   }, [searchParams]);
 
@@ -192,7 +263,7 @@ const InvitationalPage = () => {
   const [selectedPlayer2, setSelectedPlayer2] = useState<string>("");
   const [score1, setScore1] = useState<number>(0);
   const [score2, setScore2] = useState<number>(0);
-  const [raceTo, setRaceTo] = useState<number>(9);
+  const [raceTo, setRaceTo] = useState<number>(5);
   const [playerSearch, setPlayerSearch] = useState<string>("");
   // Winner confirmation: when increment would reach raceTo and win, show popup before applying
   const [showWinnerConfirm, setShowWinnerConfirm] = useState(false);
@@ -204,6 +275,10 @@ const InvitationalPage = () => {
 
   const getMatchIdsForTab = useCallback((tab: InvitationalTab): readonly string[] => {
     if (tab === "8-double") return MATCH_IDS_8_DE;
+    if (tab === "8-double-bracket-a") return MATCH_IDS_8_DE_BA;
+    if (tab === "8-double-bracket-b") return BRACKET_B.matchIds;
+    if (tab === "8-double-bracket-c") return BRACKET_C.matchIds;
+    if (tab === "8-double-bracket-d") return BRACKET_D.matchIds;
     if (tab === "8-single") return MATCH_IDS_8_SE;
     if (tab === "4-double") return MATCH_IDS_4_DE;
     if (tab === "4-single") return MATCH_IDS_4_SE;
@@ -213,6 +288,10 @@ const InvitationalPage = () => {
 
   const getRoundLabel = useCallback((tab: InvitationalTab, id: string): string => {
     if (tab === "8-double") return ROUND_LABEL_8_DE[id] ?? "—";
+    if (tab === "8-double-bracket-a") return ROUND_LABEL_8_DE_BA[id] ?? "—";
+    if (tab === "8-double-bracket-b") return BRACKET_B.roundLabels[id] ?? "—";
+    if (tab === "8-double-bracket-c") return BRACKET_C.roundLabels[id] ?? "—";
+    if (tab === "8-double-bracket-d") return BRACKET_D.roundLabels[id] ?? "—";
     if (tab === "8-single") return ROUND_LABEL_8_SE[id] ?? "—";
     if (tab === "4-double") return ROUND_LABEL_4_DE[id] ?? "—";
     if (tab === "4-single") return ROUND_LABEL_4_SE[id] ?? "—";
@@ -222,6 +301,10 @@ const InvitationalPage = () => {
 
   const getBracketForTab = useCallback((tab: InvitationalTab, id: string): "winners" | "losers" => {
     if (tab === "8-double") return (MATCH_IDS_8_DE.indexOf(id as (typeof MATCH_IDS_8_DE)[number]) < 7) ? "winners" : "losers";
+    if (tab === "8-double-bracket-a") return (MATCH_IDS_8_DE_BA.indexOf(id as (typeof MATCH_IDS_8_DE_BA)[number]) < 7) ? "winners" : "losers";
+    if (tab === "8-double-bracket-b") return (BRACKET_B.matchIds.indexOf(id) < 7) ? "winners" : "losers";
+    if (tab === "8-double-bracket-c") return (BRACKET_C.matchIds.indexOf(id) < 7) ? "winners" : "losers";
+    if (tab === "8-double-bracket-d") return (BRACKET_D.matchIds.indexOf(id) < 7) ? "winners" : "losers";
     if (tab === "8-single") return "winners";
     if (tab === "4-double") return (["4-de-m1", "4-de-m2", "4-de-m3"].includes(id)) ? "winners" : "losers";
     if (tab === "4-single") return "winners";
@@ -239,7 +322,7 @@ const InvitationalPage = () => {
         matchNumber: `M${i + 1}`,
         score1: 0,
         score2: 0,
-        raceTo: 9,
+        raceTo: 5,
         status: "pending" as const,
         round: getRoundLabel(tab, id),
         bracket: getBracketForTab(tab, id),
@@ -287,13 +370,16 @@ const InvitationalPage = () => {
         if (ids.length > 0) {
           const normalized: Match[] = ids.map((id, i) => {
             const existing = raw.find((m) => m.id === id);
-            if (existing) return existing;
+            if (existing) {
+              if (existing.raceTo === 9) return { ...existing, raceTo: 5 };
+              return existing;
+            }
             return {
               id,
               matchNumber: `M${i + 1}`,
               score1: 0,
               score2: 0,
-              raceTo: 9,
+              raceTo: 5,
               status: "pending" as const,
               round: getRoundLabel(activeTab, id),
               bracket: getBracketForTab(activeTab, id),
@@ -381,7 +467,7 @@ const InvitationalPage = () => {
           player2PhotoURL: m6?.player2?.photoURL ?? "",
           player1Score: m6?.score1 ?? 0,
           player2Score: m6?.score2 ?? 0,
-          raceTo: m6?.raceTo ?? 9,
+          raceTo: m6?.raceTo ?? 5,
           currentTurn: null,
           pocketedBalls: [],
           gameMode: "9-ball",
@@ -671,6 +757,87 @@ const InvitationalPage = () => {
       await persistMatches(updatedIds);
     }
 
+    if (isCompleted && player1 && player2 && activeTab === "8-double-bracket-a") {
+      const adv = ADVANCEMENT_8_DE_BA[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1 : player2;
+      const loserPlayer = winner === "player1" ? player2 : player1;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      if (adv?.loser) {
+        setNextMatchSlot(adv.loser.nextId, adv.loser.slot, loserPlayer);
+        updatedIds.add(adv.loser.nextId);
+      }
+      if (selectedMatch.id === "8de-a-m14") {
+        const m13 = nextMatches.find((m) => m.id === "8de-a-m13");
+        const lbChampion =
+          m13?.winner && m13.player1 && m13.player2
+            ? m13.winner === "player1" ? m13.player1 : m13.player2
+            : null;
+        if (lbChampion && winnerPlayer.id === lbChampion.id) {
+          const m15Idx = nextMatches.findIndex((m) => m.id === "8de-a-m15");
+          if (m15Idx !== -1) {
+            const m15 = { ...nextMatches[m15Idx], player1: updatedMatch.player1, player2: updatedMatch.player2 };
+            nextMatches = nextMatches.slice(0, m15Idx).concat(m15, nextMatches.slice(m15Idx + 1));
+            try {
+              await updateDoc(doc(db, "matches", "8de-a-m15"), {
+                player1: updatedMatch.player1 ?? null,
+                player2: updatedMatch.player2 ?? null,
+              });
+            } catch (e) {
+              if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+              else console.error("Error filling 8de-a-m15:", e);
+            }
+          }
+        }
+      }
+      await persistMatches(updatedIds);
+    }
+
+    const run8DeBracketAdvancement = async (prefix: string, advMap: Record<string, { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }>) => {
+      const adv = advMap[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1! : player2!;
+      const loserPlayer = winner === "player1" ? player2! : player1!;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      if (adv?.loser) {
+        setNextMatchSlot(adv.loser.nextId, adv.loser.slot, loserPlayer);
+        updatedIds.add(adv.loser.nextId);
+      }
+      if (selectedMatch.id === `${prefix}-m14`) {
+        const m13 = nextMatches.find((m) => m.id === `${prefix}-m13`);
+        const lbChampion = m13?.winner && m13.player1 && m13.player2 ? (m13.winner === "player1" ? m13.player1 : m13.player2) : null;
+        if (lbChampion && winnerPlayer.id === lbChampion.id) {
+          const m15Idx = nextMatches.findIndex((m) => m.id === `${prefix}-m15`);
+          if (m15Idx !== -1) {
+            const m15 = { ...nextMatches[m15Idx], player1: updatedMatch.player1, player2: updatedMatch.player2 };
+            nextMatches = nextMatches.slice(0, m15Idx).concat(m15, nextMatches.slice(m15Idx + 1));
+            try {
+              await updateDoc(doc(db, "matches", `${prefix}-m15`), { player1: updatedMatch.player1 ?? null, player2: updatedMatch.player2 ?? null });
+            } catch (e) {
+              if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+              else console.error(`Error filling ${prefix}-m15:`, e);
+            }
+          }
+        }
+      }
+      await persistMatches(updatedIds);
+    };
+    if (isCompleted && player1 && player2 && activeTab === "8-double-bracket-b") {
+      await run8DeBracketAdvancement("8de-b", BRACKET_B.adv);
+    }
+    if (isCompleted && player1 && player2 && activeTab === "8-double-bracket-c") {
+      await run8DeBracketAdvancement("8de-c", BRACKET_C.adv);
+    }
+    if (isCompleted && player1 && player2 && activeTab === "8-double-bracket-d") {
+      await run8DeBracketAdvancement("8de-d", BRACKET_D.adv);
+    }
+
     if (isCompleted && player1 && player2 && activeTab === "8-single") {
       const adv = ADVANCEMENT_8_SE[selectedMatch.id];
       const winnerPlayer = winner === "player1" ? player1 : player2;
@@ -778,6 +945,39 @@ const InvitationalPage = () => {
       }
       return null;
     }
+    if (tab === "8-double-bracket-a") {
+      const m14 = matchList.find((m) => m.id === "8de-a-m14");
+      const m15 = matchList.find((m) => m.id === "8de-a-m15");
+      if (m15?.status === "completed" && m15.winner && m15.player1 && m15.player2)
+        return m15.winner === "player1" ? m15.player1 : m15.player2;
+      if (m14?.status === "completed" && m14.winner && m14.player1 && m14.player2) {
+        const m13 = matchList.find((m) => m.id === "8de-a-m13");
+        const lbChampion = m13?.winner && m13.player1 && m13.player2
+          ? (m13.winner === "player1" ? m13.player1 : m13.player2)
+          : null;
+        const m14Winner = m14.winner === "player1" ? m14.player1 : m14.player2;
+        if (lbChampion && m14Winner.id === lbChampion.id) return null;
+        return m14Winner;
+      }
+      return null;
+    }
+    const champFor8DeBracket = (prefix: string) => {
+      const m14 = matchList.find((m) => m.id === `${prefix}-m14`);
+      const m15 = matchList.find((m) => m.id === `${prefix}-m15`);
+      if (m15?.status === "completed" && m15.winner && m15.player1 && m15.player2)
+        return m15.winner === "player1" ? m15.player1 : m15.player2;
+      if (m14?.status === "completed" && m14.winner && m14.player1 && m14.player2) {
+        const m13 = matchList.find((m) => m.id === `${prefix}-m13`);
+        const lbChampion = m13?.winner && m13.player1 && m13.player2 ? (m13.winner === "player1" ? m13.player1 : m13.player2) : null;
+        const m14Winner = m14.winner === "player1" ? m14.player1 : m14.player2;
+        if (lbChampion && m14Winner.id === lbChampion.id) return null;
+        return m14Winner;
+      }
+      return null;
+    };
+    if (tab === "8-double-bracket-b") return champFor8DeBracket("8de-b");
+    if (tab === "8-double-bracket-c") return champFor8DeBracket("8de-c");
+    if (tab === "8-double-bracket-d") return champFor8DeBracket("8de-d");
     if (tab === "8-single") {
       const m7 = matchList.find((m) => m.id === "8-se-m7");
       if (m7?.status === "completed" && m7.winner && m7.player1 && m7.player2)
@@ -832,6 +1032,14 @@ const InvitationalPage = () => {
   const formatLabel =
     activeTab === "8-double"
       ? "8-Player Double Elimination"
+      : activeTab === "8-double-bracket-a"
+      ? "8D- Bracket A (Double Elimination)"
+      : activeTab === "8-double-bracket-b"
+      ? "8D- Bracket B (Double Elimination)"
+      : activeTab === "8-double-bracket-c"
+      ? "8D- Bracket C (Double Elimination)"
+      : activeTab === "8-double-bracket-d"
+      ? "8D- Bracket D (Double Elimination)"
       : activeTab === "8-single"
       ? "8-Player Single Elimination"
       : activeTab === "4-double"
@@ -842,7 +1050,7 @@ const InvitationalPage = () => {
 
   return (
     <div className="p-3 bg-slate-900 min-h-screen text-slate-100">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto pb-10">
         <div className="mb-4">
           <h1 className="text-2xl font-bold text-slate-50 mb-3">Invitational</h1>
           <div className="flex flex-wrap gap-1 border-b border-slate-700 pb-2">
@@ -934,7 +1142,7 @@ const InvitationalPage = () => {
               <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
             </div>
             <div className="overflow-x-auto">
-              <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[300px]">
+              <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
@@ -943,7 +1151,7 @@ const InvitationalPage = () => {
                 </div>
                 <div className="flex flex-col min-h-[250px]">
                   <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
-                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                  <div className="flex flex-col space-y-16 items-center justify-center flex-1">
                     {["8-de-m5", "8-de-m6"].map((id) => renderMatchBox(id, false))}
                   </div>
                 </div>
@@ -959,7 +1167,7 @@ const InvitationalPage = () => {
 
           <div className="border-t-2 border-gray-300 my-2" />
 
-          {/* Losers Bracket: M8–M13 */}
+          {/* Losers Bracket: M8–M13 — reduced min-heights only; alignment kept for bracket flow */}
           <div className="w-full">
             <div className="flex items-center mb-2">
               <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">
@@ -968,26 +1176,26 @@ const InvitationalPage = () => {
               <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
             </div>
             <div className="overflow-x-auto">
-              <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[300px]">
-                <div className="flex flex-col min-h-[250px]">
+              <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                <div className="flex flex-col min-h-[175px]">
                   <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {["8-de-m8", "8-de-m9"].map((id) => renderMatchBox(id, true))}
                   </div>
                 </div>
-                <div className="flex flex-col min-h-[250px]">
+                <div className="flex flex-col min-h-[175px]">
                   <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {["8-de-m10", "8-de-m11"].map((id) => renderMatchBox(id, true))}
                   </div>
                 </div>
-                <div className="flex flex-col min-h-[250px]">
+                <div className="flex flex-col min-h-[175px]">
                   <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {renderMatchBox("8-de-m12", true)}
                   </div>
                 </div>
-                <div className="flex flex-col min-h-[250px]">
+                <div className="flex flex-col min-h-[175px]">
                   <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
                   <div className="flex flex-col space-y-1 items-center justify-center flex-1">
                     {renderMatchBox("8-de-m13", true)}
@@ -1011,6 +1219,347 @@ const InvitationalPage = () => {
               <div className="flex space-x-4 min-w-max pb-2 items-center">
                 {renderMatchBox("8-de-m14", false)}
                 {renderMatchBox("8-de-m15", false)}
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* 8D- Bracket A: same UI as 8 Double, own data; no Tour Manager sync */}
+        {activeTab === "8-double-bracket-a" && (
+        <div className="flex flex-col space-y-2">
+          {/* Winners Bracket: M1–M7 */}
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">
+                WB
+              </div>
+              <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-a-m1", "8de-a-m2", "8de-a-m3", "8de-a-m4"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
+                  <div className="flex flex-col space-y-16 items-center justify-center flex-1">
+                    {["8de-a-m5", "8de-a-m6"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-a-m7", false)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t-2 border-gray-300 my-2" />
+
+          {/* Losers Bracket: M8–M13 */}
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">
+                LB
+              </div>
+              <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-a-m8", "8de-a-m9"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-a-m10", "8de-a-m11"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-a-m12", true)}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-a-m13", true)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t-2 border-gray-300 my-2" />
+
+          {/* Grand Final (M14) + Bracket Reset (M15) */}
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">
+                Finals
+              </div>
+              <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("8de-a-m14", false)}
+                {renderMatchBox("8de-a-m15", false)}
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* 8D- Bracket B */}
+        {activeTab === "8-double-bracket-b" && (
+        <div className="flex flex-col space-y-2">
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
+              <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-b-m1", "8de-b-m2", "8de-b-m3", "8de-b-m4"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
+                  <div className="flex flex-col space-y-16 items-center justify-center flex-1">
+                    {["8de-b-m5", "8de-b-m6"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-b-m7", false)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
+              <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-b-m8", "8de-b-m9"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-b-m10", "8de-b-m11"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-b-m12", true)}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-b-m13", true)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
+              <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("8de-b-m14", false)}
+                {renderMatchBox("8de-b-m15", false)}
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* 8D- Bracket C */}
+        {activeTab === "8-double-bracket-c" && (
+        <div className="flex flex-col space-y-2">
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
+              <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-c-m1", "8de-c-m2", "8de-c-m3", "8de-c-m4"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
+                  <div className="flex flex-col space-y-16 items-center justify-center flex-1">
+                    {["8de-c-m5", "8de-c-m6"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-c-m7", false)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
+              <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-c-m8", "8de-c-m9"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-c-m10", "8de-c-m11"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-c-m12", true)}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-c-m13", true)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
+              <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("8de-c-m14", false)}
+                {renderMatchBox("8de-c-m15", false)}
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {/* 8D- Bracket D */}
+        {activeTab === "8-double-bracket-d" && (
+        <div className="flex flex-col space-y-2">
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
+              <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-d-m1", "8de-d-m2", "8de-d-m3", "8de-d-m4"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
+                  <div className="flex flex-col space-y-16 items-center justify-center flex-1">
+                    {["8de-d-m5", "8de-d-m6"].map((id) => renderMatchBox(id, false))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[250px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-d-m7", false)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
+              <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-d-m8", "8de-d-m9"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {["8de-d-m10", "8de-d-m11"].map((id) => renderMatchBox(id, true))}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-d-m12", true)}
+                  </div>
+                </div>
+                <div className="flex flex-col min-h-[175px]">
+                  <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
+                  <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                    {renderMatchBox("8de-d-m13", true)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t-2 border-gray-300 my-2" />
+          <div className="w-full">
+            <div className="flex items-center mb-2">
+              <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
+              <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("8de-d-m14", false)}
+                {renderMatchBox("8de-d-m15", false)}
               </div>
             </div>
           </div>
@@ -1206,6 +1755,14 @@ const InvitationalPage = () => {
                 const firstRoundIds: string[] =
                   activeTab === "8-double"
                     ? ["8-de-m1", "8-de-m2", "8-de-m3", "8-de-m4"]
+                    : activeTab === "8-double-bracket-a"
+                    ? ["8de-a-m1", "8de-a-m2", "8de-a-m3", "8de-a-m4"]
+                    : activeTab === "8-double-bracket-b"
+                    ? ["8de-b-m1", "8de-b-m2", "8de-b-m3", "8de-b-m4"]
+                    : activeTab === "8-double-bracket-c"
+                    ? ["8de-c-m1", "8de-c-m2", "8de-c-m3", "8de-c-m4"]
+                    : activeTab === "8-double-bracket-d"
+                    ? ["8de-d-m1", "8de-d-m2", "8de-d-m3", "8de-d-m4"]
                     : activeTab === "8-single"
                     ? ["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4"]
                     : activeTab === "4-double"
@@ -1301,7 +1858,7 @@ const InvitationalPage = () => {
                   max="21"
                   className="w-full border border-slate-600 rounded-md px-3 py-2 text-slate-100 bg-slate-800"
                   value={raceTo}
-                  onChange={(e) => setRaceTo(parseInt(e.target.value) || 9)}
+                  onChange={(e) => setRaceTo(parseInt(e.target.value) || 5)}
                 />
               </div>
 

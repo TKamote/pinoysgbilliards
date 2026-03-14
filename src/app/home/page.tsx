@@ -5,20 +5,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 const allOverlayLinks = [
-  { name: "Live Match", href: "/live-match" },
+  { name: "PBS Cup", href: "/live-match" },
   { name: "PBS Cup 8", href: "/pbs-cup-8" },
-  { name: "PBS Live", href: "/pbs-live" },
-  { name: "PBS Tour", href: "/pbs-tour" },
+  { name: "3-Logos", href: "/pbs-live" },
+  { name: "1-Logo", href: "/pbs-tour" },
   { name: "Pinoy Sargo", href: "/pbs-tour-2" },
   { name: "Ring Games", href: "/3-players" },
-  { name: "Arys", href: "/arys" },
-  { name: "Tour Manager-4", href: "/tour-manager" },
+  { name: "2-Logos", href: "/arys" },
+  { name: "2-Logos-Team", href: "/tour-manager" },
 ];
 
 const userOverlayLinks = [
   { name: "Pinoy Sargo", href: "/pbs-tour-2" },
-  { name: "Arys", href: "/arys" },
-  { name: "Tour Manager-4", href: "/tour-manager" },
+  { name: "2-Logos", href: "/arys" },
+  { name: "2-Logos-Team", href: "/tour-manager" },
 ];
 
 const HomePage = () => {

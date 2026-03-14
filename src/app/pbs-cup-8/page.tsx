@@ -578,12 +578,12 @@ const PBSCup8Page = () => {
         />
 
         {/* Bottom bar: two selectable players (barPlayer1/barPlayer2), not bound to 8 teams. Keyboard: Q/A, E/D */}
-        <div className="mt-auto w-full md:w-[70%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
+        <div className="mt-auto w-full md:w-[85%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
             <button
               type="button"
               onClick={() => canSelectPlayers && setShowBarPlayer1Modal(true)}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white transition-all duration-300 ${canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"} ${barPlayer1?.photoURL ? "bg-transparent" : "bg-indigo-800"}`}
+              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white transition-all duration-300 ${canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"} ${barPlayer1?.photoURL ? "bg-transparent" : "bg-indigo-800"}`}
             >
               {barPlayer1?.photoURL ? (
                 <Image src={barPlayer1.photoURL} alt={barPlayer1.name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
@@ -596,7 +596,7 @@ const PBSCup8Page = () => {
               onClick={() => canSelectPlayers && setShowBarPlayer1Modal(true)}
               className={`flex-1 min-w-0 h-full flex items-center justify-center px-2 ${canSelectPlayers ? "cursor-pointer hover:bg-indigo-800" : "cursor-default"} transition-colors`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
+              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
                 {barPlayer1?.name ?? "Player 1"}
               </div>
             </button>
@@ -648,14 +648,14 @@ const PBSCup8Page = () => {
               onClick={() => canSelectPlayers && setShowBarPlayer2Modal(true)}
               className={`flex-1 min-w-0 h-full flex items-center justify-center px-2 ${canSelectPlayers ? "cursor-pointer hover:bg-indigo-700" : "cursor-default"} transition-colors`}
             >
-              <div className="text-sm sm:text-xl md:text-2xl lg:text-[38px] xl:text-[44px] font-bold text-white truncate text-center w-full">
+              <div className="text-[11px] sm:text-base md:text-lg lg:text-[30px] xl:text-[35px] font-bold text-white truncate text-center w-full">
                 {barPlayer2?.name ?? "Player 2"}
               </div>
             </button>
             <button
               type="button"
               onClick={() => canSelectPlayers && setShowBarPlayer2Modal(true)}
-              className={`w-20 h-20 sm:w-[100px] sm:h-[100px] md:w-[120px] md:h-[120px] lg:w-[140px] lg:h-[140px] rounded-full overflow-hidden shrink-0 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white transition-all duration-300 ${canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"} ${barPlayer2?.photoURL ? "bg-transparent" : "bg-indigo-700"}`}
+              className={`w-[96px] h-[96px] sm:w-[120px] sm:h-[120px] md:w-[144px] md:h-[144px] lg:w-[168px] lg:h-[168px] rounded-full overflow-hidden shrink-0 flex items-center justify-center mx-1 sm:mx-1.5 md:mx-2 border-2 border-white transition-all duration-300 ${canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"} ${barPlayer2?.photoURL ? "bg-transparent" : "bg-indigo-700"}`}
             >
               {barPlayer2?.photoURL ? (
                 <Image src={barPlayer2.photoURL} alt={barPlayer2.name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
