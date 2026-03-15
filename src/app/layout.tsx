@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="icon" href="/PSGB_Logo_New.PNG" type="image/png" />
       </head>
       <body
         className={`${inter.variable} antialiased`}
