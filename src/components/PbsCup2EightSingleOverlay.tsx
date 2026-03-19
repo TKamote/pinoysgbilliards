@@ -78,6 +78,10 @@ function defaultMatch(id: string, index: number): Match {
 }
 
 export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
+  // Breaker UI: allow the same player-selection modal UI used in R1
+  // to be shown for Semis and Final as well.
+  const isBreaker8SingleUI = true;
+
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -229,14 +233,9 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
     let nextMatches = matches.map((m) => (m.id === selectedMatch.id ? updatedMatch : m));
     const updatedRefs = new Set<string>([selectedMatch.id]);
 
-    if (isCompleted && player1 && player2) {
-      const adv = ADVANCEMENT_8_SE[selectedMatch.id];
-      const winnerPlayer = winner === "player1" ? player1 : player2;
-      if (adv?.winner) {
-        nextMatches = setNextMatchSlot(nextMatches, adv.winner.nextId, adv.winner.slot, winnerPlayer);
-        updatedRefs.add(adv.winner.nextId);
-      }
-    }
+    // PBS Cup 2 (8-player) - breaker mode:
+    // Do NOT auto-advance winners into Semis/Final.
+    // Saving a match should only update the selected match itself.
 
     setMatches(nextMatches);
     setIsModalOpen(false);
@@ -379,7 +378,7 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
             </div>
 
             <div className="space-y-4">
-              {FIRST_ROUND_IDS.includes(selectedMatch.id) ? (
+              {isBreaker8SingleUI || FIRST_ROUND_IDS.includes(selectedMatch.id) ? (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-slate-200 mb-1">Search players</label>
