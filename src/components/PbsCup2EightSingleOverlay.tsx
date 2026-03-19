@@ -278,20 +278,20 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
       matchId === "pbs2-8se-m7"
         ? {
             border: "border-amber-900",
-            bg: "bg-amber-950/95",
+            bg: "bg-amber-950/70",
             hover: "hover:border-amber-600",
             divider: "border-amber-700/70",
           }
         : matchId === "pbs2-8se-m5" || matchId === "pbs2-8se-m6"
         ? {
             border: "border-indigo-900",
-            bg: "bg-indigo-950/95",
+            bg: "bg-indigo-950/70",
             hover: "hover:border-indigo-500",
             divider: "border-indigo-700/70",
           }
         : {
             border: "border-sky-900",
-            bg: "bg-sky-950/95",
+            bg: "bg-sky-950/70",
             hover: "hover:border-sky-500",
             divider: "border-sky-700/70",
           };
@@ -300,27 +300,27 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
       <button
         key={matchId}
         type="button"
-        className={`w-60 h-24 border-2 ${tone.border} ${tone.bg} rounded-lg px-3 py-0.5 ${tone.hover} hover:shadow-md transition-all text-left`}
+        className={`w-60 h-32 border-2 ${tone.border} ${tone.bg} rounded-lg px-3 py-1 ${tone.hover} hover:shadow-md transition-all text-left`}
         onClick={() => handleMatchClick(matchId)}
         disabled={!canEdit}
       >
-        <div className="grid grid-cols-[1fr_3fr_1fr] gap-3 h-full">
+        <div className="grid grid-cols-[1fr_3fr_1fr] gap-4 h-full">
           <div className={`flex items-center justify-center border-r ${tone.divider}`}>
-            <div className="font-medium text-base text-slate-100">{match?.matchNumber ?? "M?"}</div>
+            <div className="font-medium text-[20px] text-white">{match?.matchNumber ?? "M?"}</div>
           </div>
           <div className={`flex flex-col justify-center border-r ${tone.divider}`}>
-            <div className={`text-center border-b ${tone.divider} pb-1 font-medium text-lg ${winner === "player1" ? "bg-emerald-700/80 text-slate-50 font-bold" : "text-slate-100"}`}>
+            <div className={`text-center border-b ${tone.divider} pb-1 font-medium text-[23px] ${winner === "player1" ? "bg-emerald-700/80 text-white font-bold" : "text-white"}`}>
               {match?.player1?.name ?? "TBD"}
             </div>
-            <div className={`text-center pt-1 font-medium text-lg ${winner === "player2" ? "bg-emerald-700/80 text-slate-50 font-bold" : "text-slate-100"}`}>
+            <div className={`text-center pt-1 font-medium text-[23px] ${winner === "player2" ? "bg-emerald-700/80 text-white font-bold" : "text-white"}`}>
               {match?.player2?.name ?? "TBD"}
             </div>
           </div>
           <div className="flex flex-col justify-center">
-            <div className={`font-bold text-center border-b ${tone.divider} pb-1 text-lg ${winner === "player1" ? "bg-emerald-700/80 text-slate-50" : "text-slate-100"}`}>
+            <div className={`font-bold text-center border-b ${tone.divider} pb-1 text-[23px] ${winner === "player1" ? "bg-emerald-700/80 text-white" : "text-white"}`}>
               {match?.score1 ?? "-"}
             </div>
-            <div className={`font-bold text-center pt-1 text-lg ${winner === "player2" ? "bg-emerald-700/80 text-slate-50" : "text-slate-100"}`}>
+            <div className={`font-bold text-center pt-1 text-[23px] ${winner === "player2" ? "bg-emerald-700/80 text-white" : "text-white"}`}>
               {match?.score2 ?? "-"}
             </div>
           </div>
@@ -331,26 +331,26 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
 
   return (
     <>
-      <div className="w-full md:w-[75%] mx-auto mt-1 md:mt-2 rounded-lg border border-transparent bg-transparent p-4">
+      <div className="w-full md:w-[75%] mx-auto mt-1 md:mt-2 rounded-lg border border-transparent bg-black/60 p-4">
         <div className="flex items-center justify-center mb-3">
-          <h2 className="text-3xl font-bold text-slate-900">PBS Cup March 2026</h2>
+          <h2 className="text-[39px] font-bold text-white">PBS Cup March 2026</h2>
         </div>
         <div className="overflow-x-auto">
-          <div className="flex w-max space-x-[4.5rem] mx-auto pb-3 items-start min-h-[420px]">
-            <div className="flex flex-col min-h-[450px]">
-              <div className="text-center font-bold text-xl text-slate-900 mb-3">R1</div>
+          <div className="flex w-max space-x-[4.5rem] mx-auto pb-3 items-start min-h-[546px]">
+            <div className="flex flex-col min-h-[585px]">
+              <div className="text-center font-bold text-[26px] text-white mb-3">R1</div>
               <div className="flex flex-col flex-1">
-                <div className="flex-1 flex flex-col space-y-5 items-center justify-center">
+                <div className="flex-1 flex flex-col space-y-[1.6rem] items-center justify-center">
                   {["pbs2-8se-m1", "pbs2-8se-m2"].map((id) => renderMatchBox(id))}
                 </div>
-                <div className="flex-1 flex flex-col space-y-5 items-center justify-center">
+                <div className="flex-1 flex flex-col space-y-[1.6rem] items-center justify-center">
                   {["pbs2-8se-m3", "pbs2-8se-m4"].map((id) => renderMatchBox(id))}
                 </div>
               </div>
             </div>
-            <div className="flex flex-col min-h-[450px]">
-              <div className="text-center font-bold text-xl text-slate-900 mb-3">Semis</div>
-              <div className="flex flex-col flex-1 min-h-[450px]">
+            <div className="flex flex-col min-h-[585px]">
+              <div className="text-center font-bold text-[26px] text-white mb-3">Semis</div>
+              <div className="flex flex-col flex-1 min-h-[585px]">
                 <div className="flex-1 flex items-center justify-center">
                   {renderMatchBox("pbs2-8se-m5")}
                 </div>
@@ -359,8 +359,8 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col min-h-[450px]">
-              <div className="text-center font-bold text-xl text-slate-900 mb-3">Final</div>
+            <div className="flex flex-col min-h-[585px]">
+              <div className="text-center font-bold text-[26px] text-white mb-3">Final</div>
               <div className="flex flex-col space-y-0 items-center justify-center flex-1 pt-0">
                 {renderMatchBox("pbs2-8se-m7")}
               </div>
@@ -373,27 +373,27 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-900 rounded-lg p-6 w-96 max-w-md mx-4 border border-slate-600">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-slate-100">{selectedMatch.matchNumber} - {selectedMatch.round}</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-300 font-medium hover:text-slate-100">✕</button>
+              <h3 className="text-lg font-bold text-white">{selectedMatch.matchNumber} - {selectedMatch.round}</h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-white font-medium hover:text-white">✕</button>
             </div>
 
             <div className="space-y-4">
               {isBreaker8SingleUI || FIRST_ROUND_IDS.includes(selectedMatch.id) ? (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">Search players</label>
+                    <label className="block text-sm font-medium text-white mb-1">Search players</label>
                     <input
                       type="text"
                       value={playerSearch}
                       onChange={(e) => setPlayerSearch(e.target.value)}
-                      className="w-full border border-slate-600 rounded-md px-3 py-1.5 text-slate-100 text-sm bg-slate-800"
+                      className="w-full border border-slate-600 rounded-md px-3 py-1.5 text-white text-sm bg-slate-800"
                       placeholder="Type to filter names..."
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">Player 1</label>
+                    <label className="block text-sm font-medium text-white mb-1">Player 1</label>
                     <select
-                      className="w-full border border-slate-600 rounded-md px-3 py-2 text-slate-100 bg-slate-800"
+                      className="w-full border border-slate-600 rounded-md px-3 py-2 text-white bg-slate-800"
                       value={selectedPlayer1}
                       onChange={(e) => setSelectedPlayer1(e.target.value)}
                     >
@@ -404,9 +404,9 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-200 mb-1">Player 2</label>
+                    <label className="block text-sm font-medium text-white mb-1">Player 2</label>
                     <select
-                      className="w-full border border-slate-600 rounded-md px-3 py-2 text-slate-100 bg-slate-800"
+                      className="w-full border border-slate-600 rounded-md px-3 py-2 text-white bg-slate-800"
                       value={selectedPlayer2}
                       onChange={(e) => setSelectedPlayer2(e.target.value)}
                     >
@@ -419,22 +419,22 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
                 </>
               ) : (
                 <div className="flex gap-4 text-sm">
-                  <div className="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 font-medium">
+                  <div className="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white font-medium">
                     {players.find((p) => p.id === selectedPlayer1)?.name ?? "Player 1"}
                   </div>
-                  <div className="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100 font-medium">
+                  <div className="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white font-medium">
                     {players.find((p) => p.id === selectedPlayer2)?.name ?? "Player 2"}
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-slate-200 mb-1">Race to X</label>
+                <label className="block text-sm font-medium text-white mb-1">Race to X</label>
                 <input
                   type="number"
                   min="1"
                   max="21"
-                  className="w-full border border-slate-600 rounded-md px-3 py-2 text-slate-100 bg-slate-800"
+                  className="w-full border border-slate-600 rounded-md px-3 py-2 text-white bg-slate-800"
                   value={raceTo}
                   onChange={(e) => setRaceTo(parseInt(e.target.value, 10) || 5)}
                 />
@@ -442,31 +442,31 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     {players.find((p) => p.id === selectedPlayer1)?.name ?? "Player 1"}
                   </label>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={handleDecrementScore1} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700" disabled={score1 <= 0}>-</button>
-                    <span className="min-w-[3rem] text-center text-lg font-bold text-slate-100">{score1}</span>
-                    <button type="button" onClick={handleIncrementScore1} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700" disabled={score1 >= raceTo}>+</button>
+                    <button type="button" onClick={handleDecrementScore1} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-white font-bold hover:bg-slate-700" disabled={score1 <= 0}>-</button>
+                    <span className="min-w-[3rem] text-center text-lg font-bold text-white">{score1}</span>
+                    <button type="button" onClick={handleIncrementScore1} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-white font-bold hover:bg-slate-700" disabled={score1 >= raceTo}>+</button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     {players.find((p) => p.id === selectedPlayer2)?.name ?? "Player 2"}
                   </label>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={handleDecrementScore2} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700" disabled={score2 <= 0}>-</button>
-                    <span className="min-w-[3rem] text-center text-lg font-bold text-slate-100">{score2}</span>
-                    <button type="button" onClick={handleIncrementScore2} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-slate-100 font-bold hover:bg-slate-700" disabled={score2 >= raceTo}>+</button>
+                    <button type="button" onClick={handleDecrementScore2} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-white font-bold hover:bg-slate-700" disabled={score2 <= 0}>-</button>
+                    <span className="min-w-[3rem] text-center text-lg font-bold text-white">{score2}</span>
+                    <button type="button" onClick={handleIncrementScore2} className="w-10 h-10 rounded-md border-2 border-slate-500 bg-slate-800 text-white font-bold hover:bg-slate-700" disabled={score2 >= raceTo}>+</button>
                   </div>
                 </div>
               </div>
 
               {showWinnerConfirm && pendingWinner && (
                 <div className="rounded-lg border-2 border-amber-500 bg-amber-50 p-4">
-                  <p className="text-sm font-medium text-slate-100 mb-1">Confirm winner</p>
-                  <p className="text-slate-300 mb-3">
+                  <p className="text-sm font-medium text-white mb-1">Confirm winner</p>
+                  <p className="text-white mb-3">
                     {(pendingWinner === "player1"
                       ? players.find((p) => p.id === selectedPlayer1)?.name ?? "Player 1"
                       : players.find((p) => p.id === selectedPlayer2)?.name ?? "Player 2")} has reached race to {raceTo}. Confirm as winner?
@@ -478,7 +478,7 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
                         setShowWinnerConfirm(false);
                         setPendingWinner(null);
                       }}
-                      className="flex-1 py-2 px-3 rounded-md border border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                      className="flex-1 py-2 px-3 rounded-md border border-slate-600 bg-slate-800 text-white hover:bg-slate-700"
                     >
                       Cancel
                     </button>
