@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import Image from "next/image";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useLive, GameMode } from "@/contexts/LiveContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsage } from "@/contexts/UsageContext";
@@ -71,6 +74,17 @@ const PBSCup8Page = () => {
   const { showLimitReachedModal } = useUsage();
   const canSelectPlayers = !!user && !pbsCup8IsLive;
   const ballNumbers = getBallNumbers(pbsCup8GameMode);
+  const isReorderingRef = useRef(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 }, // avoid treating normal click as drag
+    })
+  );
+
+  const visibleIndices = teams
+    .map((t, i) => (t.hidden ? null : i))
+    .filter((v): v is number => v !== null);
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -443,6 +457,210 @@ const PBSCup8Page = () => {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleResetBalls, user, loading]);
 
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const finalize = () => {
+        window.setTimeout(() => {
+          isReorderingRef.current = false;
+        }, 0);
+      };
+
+      const { active, over } = event;
+      if (!over) {
+        finalize();
+        return;
+      }
+
+      const fromTeamIndex = Number(active.id);
+      const toTeamIndex = Number(over.id);
+      if (Number.isNaN(fromTeamIndex) || Number.isNaN(toTeamIndex)) {
+        finalize();
+        return;
+      }
+      if (fromTeamIndex === toTeamIndex) {
+        finalize();
+        return;
+      }
+
+      setTeams((prevTeams) => {
+        const prevVisibleIndices = prevTeams
+          .map((t, i) => (t.hidden ? null : i))
+          .filter((v): v is number => v !== null);
+
+        const fromPos = prevVisibleIndices.indexOf(fromTeamIndex);
+        const toPos = prevVisibleIndices.indexOf(toTeamIndex);
+        if (fromPos === -1 || toPos === -1) return prevTeams;
+
+        const visibleSlots = prevVisibleIndices.map((i) => prevTeams[i]);
+        const nextVisibleSlots = arrayMove(visibleSlots, fromPos, toPos);
+
+        const nextTeams = [...prevTeams];
+        prevVisibleIndices.forEach((origIdx, pos) => {
+          nextTeams[origIdx] = nextVisibleSlots[pos]; // score moves with row
+        });
+        return nextTeams;
+      });
+
+      finalize();
+    },
+    [setTeams]
+  );
+
+  const SortableTeamSlot = ({
+    slot,
+    teamIndex,
+  }: {
+    slot: TeamSlot;
+    teamIndex: number;
+  }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: teamIndex,
+      disabled: !canSelectPlayers,
+    });
+
+    const teamBg =
+      [
+        "#1a1a2e",
+        "#16213e",
+        "#0f3460",
+        "#b71c1c",
+        "#1b5e20",
+        "#2d1b4e",
+        "#4a148c",
+        "#1e3a5f",
+      ][teamIndex] ?? "#1a1a2e";
+
+    const name = slot.player?.name ?? `Team ${teamIndex + 1}`;
+    const photo = slot.player?.photoURL || null;
+    const placeholder = getPlaceholder(slot.player?.id);
+
+    const style: CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.6 : 1,
+      zIndex: isDragging ? 50 : undefined,
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="inline-flex items-center gap-0 overflow-visible w-fit self-start"
+      >
+        <div
+          className="relative px-2 py-1 flex items-center justify-between space-x-2 overflow-visible text-white shrink-0"
+          style={{ minWidth: "247.5px", width: "247.5px", backgroundColor: teamBg }}
+        >
+          <div className="flex items-center space-x-2 flex-1 min-w-0 overflow-visible">
+            <button
+              type="button"
+              onClick={() => {
+                if (isReorderingRef.current) return;
+                canSelectPlayers && setShowTeamModalIndex(teamIndex);
+              }}
+              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 border-2 border-white flex items-center justify-center -my-1 ${
+                canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"
+              } ${!photo ? "bg-black/30" : ""}`}
+            >
+              {photo ? (
+                <Image
+                  key={slot.player?.id ?? `empty-${teamIndex}`}
+                  src={photo}
+                  alt={name}
+                  width={56}
+                  height={56}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <Image
+                  key={slot.player?.id ?? `empty-${teamIndex}`}
+                  src={placeholder}
+                  alt={name}
+                  width={56}
+                  height={56}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (isReorderingRef.current) return;
+                canSelectPlayers && setShowTeamModalIndex(teamIndex);
+              }}
+              className={`flex-1 min-w-0 text-left font-bold truncate ${
+                canSelectPlayers ? "hover:opacity-80" : ""
+              }`}
+              style={{ fontSize: "22.5px" }}
+            >
+              {name}
+            </button>
+
+            <div className="flex flex-col space-y-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReorderingRef.current) return;
+                  setTeamScore(teamIndex, 1);
+                }}
+                className="opacity-60 hover:opacity-100"
+                title="Increment"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReorderingRef.current) return;
+                  setTeamScore(teamIndex, -1);
+                }}
+                className="opacity-60 hover:opacity-100"
+                title="Decrement"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="font-bold shrink-0" style={{ fontSize: "27.5px", color: "#FFD700" }}>
+            {slot.score}
+          </div>
+        </div>
+
+        {canSelectPlayers && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isReorderingRef.current) return;
+              handleDeleteTeam(teamIndex);
+            }}
+            className="p-1.5 text-white opacity-40 hover:opacity-100 transition-opacity rounded shrink-0 cursor-pointer"
+            title="Clear this team slot"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
       <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
@@ -458,86 +676,26 @@ const PBSCup8Page = () => {
         </div>
 
         <div className="absolute z-10 flex flex-col items-start space-y-2 overflow-visible" style={{ top: "160px", left: "30px" }}>
-          {teams.map((slot, index) => {
-            if (slot.hidden) return null;
-            const teamBg = ["#1a1a2e", "#16213e", "#0f3460", "#b71c1c", "#1b5e20", "#2d1b4e", "#4a148c", "#1e3a5f"][index];
-            const name = slot.player?.name ?? `Team ${index + 1}`;
-            const photo = slot.player?.photoURL || null;
-            const placeholder = getPlaceholder(slot.player?.id);
-            return (
-              <div key={index} className="flex items-center gap-0 overflow-visible">
-                <div
-                  className="relative px-2 py-1 flex items-center justify-between space-x-2 overflow-visible text-white"
-                  style={{ minWidth: "247.5px", backgroundColor: teamBg }}
-                >
-                <div className="flex items-center space-x-2 flex-1 min-w-0 overflow-visible">
-                  <button
-                    type="button"
-                    onClick={() => canSelectPlayers && setShowTeamModalIndex(index)}
-                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 border-2 border-white flex items-center justify-center -my-1 ${
-                      canSelectPlayers ? "cursor-pointer hover:opacity-80" : "cursor-default"
-                    } ${!photo ? "bg-black/30" : ""}`}
-                  >
-                    {photo ? (
-                      <Image key={slot.player?.id ?? `empty-${index}`} src={photo} alt={name} width={56} height={56} className="w-full h-full object-cover" unoptimized />
-                    ) : (
-                      <Image key={slot.player?.id ?? `empty-${index}`} src={placeholder} alt={name} width={56} height={56} className="w-full h-full object-cover" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => canSelectPlayers && setShowTeamModalIndex(index)}
-                    className={`flex-1 min-w-0 text-left font-bold truncate ${canSelectPlayers ? "hover:opacity-80" : ""}`}
-                    style={{ fontSize: "22.5px" }}
-                  >
-                    {name}
-                  </button>
-                  <div className="flex flex-col space-y-0.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setTeamScore(index, 1)}
-                      className="opacity-60 hover:opacity-100"
-                      title="Increment"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTeamScore(index, -1)}
-                      className="opacity-60 hover:opacity-100"
-                      title="Decrement"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div className="font-bold shrink-0" style={{ fontSize: "27.5px", color: "#FFD700" }}>
-                  {slot.score}
-                </div>
-                </div>
-                {canSelectPlayers && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteTeam(index);
-                    }}
-                    className="p-1.5 text-white opacity-40 hover:opacity-100 transition-opacity rounded shrink-0 cursor-pointer"
-                    title="Clear this team slot"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={() => {
+              isReorderingRef.current = true;
+            }}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => {
+              window.setTimeout(() => {
+                isReorderingRef.current = false;
+              }, 0);
+            }}
+          >
+            <SortableContext items={visibleIndices} strategy={verticalListSortingStrategy}>
+              {visibleIndices.map((teamIndex) => {
+                const slot = teams[teamIndex];
+                return <SortableTeamSlot key={teamIndex} slot={slot} teamIndex={teamIndex} />;
+              })}
+            </SortableContext>
+          </DndContext>
           <div className="bg-black px-4 py-2 text-white flex items-center space-x-2" style={{ minWidth: "247.5px" }}>
             <div className="text-lg sm:text-xl font-bold">Race to</div>
             <div className="text-lg sm:text-xl font-bold">5</div>
@@ -578,7 +736,7 @@ const PBSCup8Page = () => {
         />
 
         {/* Bottom bar: two selectable players (barPlayer1/barPlayer2), not bound to 8 teams. Keyboard: Q/A, E/D */}
-        <div className="mt-auto w-full md:w-[85%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
+        <div className="mt-auto w-full md:w-[75%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
           <div className="bg-indigo-900 flex items-center h-12 sm:h-14 md:h-16 flex-1 min-w-0 overflow-visible">
             <button
               type="button"

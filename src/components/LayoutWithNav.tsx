@@ -33,6 +33,7 @@ export default function LayoutWithNav({
     threePlayersIsLive,
     tourManagerIsLive,
     pbsCup8IsLive,
+    pbsCup2IsLive,
     gameMode,
     setGameMode,
     pbsGameMode,
@@ -47,6 +48,8 @@ export default function LayoutWithNav({
     setTourManagerGameMode,
     pbsCup8GameMode,
     setPbsCup8GameMode,
+    pbsCup2GameMode,
+    setPbsCup2GameMode,
   } = useLive();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -59,7 +62,8 @@ export default function LayoutWithNav({
     (pathname === "/pbs-tour-2" && pbsTour2IsLive) ||
     (pathname === "/3-players" && threePlayersIsLive) ||
     (pathname === "/tour-manager" && tourManagerIsLive) ||
-    (pathname === "/pbs-cup-8" && pbsCup8IsLive);
+    (pathname === "/pbs-cup-8" && pbsCup8IsLive) ||
+    (pathname === "/pbs-cup-2" && pbsCup2IsLive);
   if (thisPageLive) {
     return (
       <>
@@ -178,6 +182,16 @@ export default function LayoutWithNav({
                   <>
                     <label htmlFor="nav-pbsCup8GameMode" className="font-medium text-gray-700">Game Mode:</label>
                     <select id="nav-pbsCup8GameMode" value={pbsCup8GameMode} onChange={(e) => setPbsCup8GameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
+                      <option value="9-ball">9-ball</option>
+                      <option value="10-ball">10-ball</option>
+                      <option value="15-ball">15-ball</option>
+                    </select>
+                  </>
+                )}
+                {pathname === "/pbs-cup-2" && (
+                  <>
+                    <label htmlFor="nav-pbsCup2GameMode" className="font-medium text-gray-700">Game Mode:</label>
+                    <select id="nav-pbsCup2GameMode" value={pbsCup2GameMode} onChange={(e) => setPbsCup2GameMode(e.target.value as GameMode)} className="rounded-md border border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500 py-1">
                       <option value="9-ball">9-ball</option>
                       <option value="10-ball">10-ball</option>
                       <option value="15-ball">15-ball</option>
