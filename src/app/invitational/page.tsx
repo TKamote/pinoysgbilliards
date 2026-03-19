@@ -6,6 +6,7 @@ import {
   collection,
   getDocs,
   doc,
+  getDoc,
   setDoc,
   updateDoc,
 } from "firebase/firestore";
@@ -13,14 +14,17 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsage } from "@/contexts/UsageContext";
 import TournamentWinnerModal from "@/components/TournamentWinnerModal";
+import TenPlayerBracketA from "@/components/TenPlayerBracketA";
 
-export type InvitationalTab = "8-double" | "8-double-bracket-a" | "8-double-bracket-b" | "8-double-bracket-c" | "8-double-bracket-d" | "8-single" | "4-double" | "4-single" | "16-single";
+export type InvitationalTab = "8-double" | "8-double-bracket-a" | "8-double-bracket-b" | "8-double-bracket-c" | "8-double-bracket-d" | "10-double" | "10-double-bracket-a" | "8-single" | "4-double" | "4-single" | "16-single";
 const TABS: { id: InvitationalTab; label: string }[] = [
   { id: "8-double", label: "8 Double" },
   { id: "8-double-bracket-a", label: "8D- Bracket A" },
   { id: "8-double-bracket-b", label: "8D- Bracket B" },
   { id: "8-double-bracket-c", label: "8D- Bracket C" },
   { id: "8-double-bracket-d", label: "8D- Bracket D" },
+  { id: "10-double", label: "10 Players DE (8–10)" },
+  { id: "10-double-bracket-a", label: "10P-Bracket A" },
   { id: "8-single", label: "8 Single" },
   { id: "4-double", label: "4 Double" },
   { id: "4-single", label: "4 Single" },
@@ -29,6 +33,8 @@ const TABS: { id: InvitationalTab; label: string }[] = [
 const DEFAULT_TAB: InvitationalTab = "8-double";
 const TOUR_MANAGER_MATCH_ID = "tour-manager";
 const FOUR_DOUBLE_GRAND_FINAL_ID = "4-de-m6";
+const FLEX_10_CONFIG_PATH = "config/invitational_10double";
+export type Flex10PlayerCount = 8 | 9 | 10;
 
 // Types
 interface Player {
@@ -232,6 +238,178 @@ const ROUND_LABEL_16_SE: Record<string, string> = {
   "16-se-m15": "Final",
 };
 
+const MATCH_IDS_10_DE_BA = Array.from({ length: 31 }, (_, i) => `10de-a-${i + 1}`);
+
+// --- 10-double tab: 8 / 9 / 10 players (determined at Start) ---
+// 8 players: same as 8DE, prefix 10de-8 (15 matches)
+const MATCH_IDS_10DE_8 = ["10de-8-m1", "10de-8-m2", "10de-8-m3", "10de-8-m4", "10de-8-m5", "10de-8-m6", "10de-8-m7", "10de-8-m8", "10de-8-m9", "10de-8-m10", "10de-8-m11", "10de-8-m12", "10de-8-m13", "10de-8-m14", "10de-8-m15"] as const;
+const ADVANCEMENT_10DE_8: Record<string, { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }> = {
+  "10de-8-m1": { winner: { nextId: "10de-8-m5", slot: "player1" }, loser: { nextId: "10de-8-m8", slot: "player1" } },
+  "10de-8-m2": { winner: { nextId: "10de-8-m5", slot: "player2" }, loser: { nextId: "10de-8-m8", slot: "player2" } },
+  "10de-8-m3": { winner: { nextId: "10de-8-m6", slot: "player1" }, loser: { nextId: "10de-8-m9", slot: "player1" } },
+  "10de-8-m4": { winner: { nextId: "10de-8-m6", slot: "player2" }, loser: { nextId: "10de-8-m9", slot: "player2" } },
+  "10de-8-m5": { winner: { nextId: "10de-8-m7", slot: "player1" }, loser: { nextId: "10de-8-m10", slot: "player1" } },
+  "10de-8-m6": { winner: { nextId: "10de-8-m7", slot: "player2" }, loser: { nextId: "10de-8-m11", slot: "player1" } },
+  "10de-8-m7": { winner: { nextId: "10de-8-m14", slot: "player1" }, loser: { nextId: "10de-8-m13", slot: "player1" } },
+  "10de-8-m8": { winner: { nextId: "10de-8-m10", slot: "player2" } },
+  "10de-8-m9": { winner: { nextId: "10de-8-m11", slot: "player2" } },
+  "10de-8-m10": { winner: { nextId: "10de-8-m12", slot: "player1" } },
+  "10de-8-m11": { winner: { nextId: "10de-8-m12", slot: "player2" } },
+  "10de-8-m12": { winner: { nextId: "10de-8-m13", slot: "player2" } },
+  "10de-8-m13": { winner: { nextId: "10de-8-m14", slot: "player2" } },
+  "10de-8-m14": {},
+  "10de-8-m15": {},
+};
+const ROUND_LABEL_10DE_8: Record<string, string> = {
+  "10de-8-m1": "WB R1", "10de-8-m2": "WB R1", "10de-8-m3": "WB R1", "10de-8-m4": "WB R1",
+  "10de-8-m5": "WB R2", "10de-8-m6": "WB R2", "10de-8-m7": "WB Final",
+  "10de-8-m8": "LB R1", "10de-8-m9": "LB R1", "10de-8-m10": "LB R2", "10de-8-m11": "LB R2",
+  "10de-8-m12": "LB R3", "10de-8-m13": "LB Final", "10de-8-m14": "Grand Final", "10de-8-m15": "Bracket Reset",
+};
+
+// 9 players: 1 qualy (q1) + 8 main (m1..m15; m4 has bye for q1 winner)
+const MATCH_IDS_10DE_9 = ["10de-9-q1", "10de-9-m1", "10de-9-m2", "10de-9-m3", "10de-9-m4", "10de-9-m5", "10de-9-m6", "10de-9-m7", "10de-9-m8", "10de-9-m9", "10de-9-m10", "10de-9-m11", "10de-9-m12", "10de-9-m13", "10de-9-m14", "10de-9-m15"] as const;
+const ADVANCEMENT_10DE_9: Record<string, { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }> = {
+  "10de-9-q1": { winner: { nextId: "10de-9-m4", slot: "player2" }, loser: { nextId: "10de-9-m8", slot: "player1" } },
+  "10de-9-m1": { winner: { nextId: "10de-9-m5", slot: "player1" }, loser: { nextId: "10de-9-m8", slot: "player2" } },
+  "10de-9-m2": { winner: { nextId: "10de-9-m5", slot: "player2" }, loser: { nextId: "10de-9-m9", slot: "player1" } },
+  "10de-9-m3": { winner: { nextId: "10de-9-m6", slot: "player1" }, loser: { nextId: "10de-9-m9", slot: "player2" } },
+  "10de-9-m4": { winner: { nextId: "10de-9-m6", slot: "player2" }, loser: { nextId: "10de-9-m11", slot: "player1" } },
+  "10de-9-m5": { winner: { nextId: "10de-9-m7", slot: "player1" }, loser: { nextId: "10de-9-m11", slot: "player2" } },
+  "10de-9-m6": { winner: { nextId: "10de-9-m7", slot: "player2" }, loser: { nextId: "10de-9-m13", slot: "player1" } },
+  "10de-9-m7": { winner: { nextId: "10de-9-m14", slot: "player1" }, loser: { nextId: "10de-9-m13", slot: "player2" } },
+  "10de-9-m8": { winner: { nextId: "10de-9-m10", slot: "player1" } },
+  "10de-9-m9": { winner: { nextId: "10de-9-m10", slot: "player2" } },
+  "10de-9-m10": { winner: { nextId: "10de-9-m12", slot: "player1" } },
+  "10de-9-m11": { winner: { nextId: "10de-9-m12", slot: "player2" } },
+  "10de-9-m12": { winner: { nextId: "10de-9-m13", slot: "player1" } },
+  "10de-9-m13": { winner: { nextId: "10de-9-m14", slot: "player2" } },
+  "10de-9-m14": {},
+  "10de-9-m15": {},
+};
+const ROUND_LABEL_10DE_9: Record<string, string> = {
+  "10de-9-q1": "Qualy R1",
+  "10de-9-m1": "WB R1", "10de-9-m2": "WB R1", "10de-9-m3": "WB R1", "10de-9-m4": "WB R1",
+  "10de-9-m5": "WB R2", "10de-9-m6": "WB R2", "10de-9-m7": "WB Final",
+  "10de-9-m8": "LB R1", "10de-9-m9": "LB R1", "10de-9-m10": "LB R2", "10de-9-m11": "LB R2",
+  "10de-9-m12": "LB R3", "10de-9-m13": "LB Final", "10de-9-m14": "Grand Final", "10de-9-m15": "Bracket Reset",
+};
+
+// 10 players: 2 qualy (q1, q2) + 8 main (m1..m16; m3/m4 have byes for q1/q2 winners)
+const MATCH_IDS_10DE_10 = ["10de-10-q1", "10de-10-q2", "10de-10-m1", "10de-10-m2", "10de-10-m3", "10de-10-m4", "10de-10-m5", "10de-10-m6", "10de-10-m7", "10de-10-m8", "10de-10-m9", "10de-10-m10", "10de-10-m11", "10de-10-m12", "10de-10-m13", "10de-10-m14", "10de-10-m15", "10de-10-m16", "10de-10-m17"] as const;
+const ADVANCEMENT_10DE_10: Record<string, { winner?: { nextId: string; slot: Slot }; loser?: { nextId: string; slot: Slot } }> = {
+  "10de-10-q1": { winner: { nextId: "10de-10-m3", slot: "player2" }, loser: { nextId: "10de-10-m8", slot: "player1" } },
+  "10de-10-q2": { winner: { nextId: "10de-10-m4", slot: "player2" }, loser: { nextId: "10de-10-m9", slot: "player1" } },
+  "10de-10-m1": { winner: { nextId: "10de-10-m5", slot: "player1" }, loser: { nextId: "10de-10-m8", slot: "player2" } },
+  "10de-10-m2": { winner: { nextId: "10de-10-m5", slot: "player2" }, loser: { nextId: "10de-10-m9", slot: "player2" } },
+  "10de-10-m3": { winner: { nextId: "10de-10-m6", slot: "player1" }, loser: { nextId: "10de-10-m10", slot: "player2" } },
+  "10de-10-m4": { winner: { nextId: "10de-10-m6", slot: "player2" }, loser: { nextId: "10de-10-m11", slot: "player2" } },
+  "10de-10-m5": { winner: { nextId: "10de-10-m7", slot: "player1" }, loser: { nextId: "10de-10-m12", slot: "player2" } },
+  "10de-10-m6": { winner: { nextId: "10de-10-m7", slot: "player2" }, loser: { nextId: "10de-10-m13", slot: "player2" } },
+  "10de-10-m7": { winner: { nextId: "10de-10-m16", slot: "player1" }, loser: { nextId: "10de-10-m15", slot: "player2" } },
+  "10de-10-m8": { winner: { nextId: "10de-10-m10", slot: "player1" } },
+  "10de-10-m9": { winner: { nextId: "10de-10-m11", slot: "player1" } },
+  "10de-10-m10": { winner: { nextId: "10de-10-m12", slot: "player1" } },
+  "10de-10-m11": { winner: { nextId: "10de-10-m13", slot: "player1" } },
+  "10de-10-m12": { winner: { nextId: "10de-10-m14", slot: "player1" } },
+  "10de-10-m13": { winner: { nextId: "10de-10-m14", slot: "player2" } },
+  "10de-10-m14": { winner: { nextId: "10de-10-m15", slot: "player1" } },
+  "10de-10-m15": { winner: { nextId: "10de-10-m16", slot: "player2" } },
+  "10de-10-m16": {},
+  "10de-10-m17": {},
+};
+const ROUND_LABEL_10DE_10: Record<string, string> = {
+  "10de-10-q1": "Qualy R1", "10de-10-q2": "Qualy R1",
+  "10de-10-m1": "WB R1", "10de-10-m2": "WB R1", "10de-10-m3": "WB R1", "10de-10-m4": "WB R1",
+  "10de-10-m5": "WB R2", "10de-10-m6": "WB R2", "10de-10-m7": "WB Final",
+  "10de-10-m8": "LB R1", "10de-10-m9": "LB R1",
+  "10de-10-m10": "LB R2", "10de-10-m11": "LB R2",
+  "10de-10-m12": "LB R3", "10de-10-m13": "LB R3",
+  "10de-10-m14": "LB R4", "10de-10-m15": "LB Final",
+  "10de-10-m16": "Grand Final", "10de-10-m17": "Bracket Reset",
+};
+
+function getFlex10MatchIds(playerCount: Flex10PlayerCount): readonly string[] {
+  if (playerCount === 8) return MATCH_IDS_10DE_8;
+  if (playerCount === 9) return MATCH_IDS_10DE_9;
+  return MATCH_IDS_10DE_10;
+}
+
+function getFlex10RoundLabel(playerCount: Flex10PlayerCount, id: string): string {
+  if (playerCount === 8) return ROUND_LABEL_10DE_8[id] ?? "—";
+  if (playerCount === 9) return ROUND_LABEL_10DE_9[id] ?? "—";
+  return ROUND_LABEL_10DE_10[id] ?? "—";
+}
+
+function getFlex10Bracket(playerCount: Flex10PlayerCount, id: string): "winners" | "losers" {
+  if (playerCount === 8) return (MATCH_IDS_10DE_8 as readonly string[]).indexOf(id) < 7 ? "winners" : "losers";
+  if (playerCount === 9) return (["10de-9-q1", "10de-9-m1", "10de-9-m2", "10de-9-m3", "10de-9-m4", "10de-9-m5", "10de-9-m6", "10de-9-m7"].includes(id)) ? "winners" : "losers";
+  return (["10de-10-q1", "10de-10-q2", "10de-10-m1", "10de-10-m2", "10de-10-m3", "10de-10-m4", "10de-10-m5", "10de-10-m6", "10de-10-m7"].includes(id)) ? "winners" : "losers";
+}
+
+function seedFlex10Bracket(
+  playerCount: Flex10PlayerCount,
+  entryPlayerIds: string[],
+  players: Player[],
+): Match[] {
+  const getPlayer = (id: string) => players.find((p) => p.id === id);
+  const ids = getFlex10MatchIds(playerCount);
+  const roundLabel = (id: string) => getFlex10RoundLabel(playerCount, id);
+  const bracket = (id: string) => getFlex10Bracket(playerCount, id);
+  const baseMatch = (id: string, i: number): Match => ({
+    id,
+    matchNumber: `M${i + 1}`,
+    score1: 0,
+    score2: 0,
+    raceTo: 5,
+    status: "pending" as const,
+    round: roundLabel(id),
+    bracket: bracket(id),
+  });
+  const matches: Match[] = ids.map((id, i) => ({ ...baseMatch(id, i) }));
+
+  const setSlot = (matchId: string, slot: "player1" | "player2", playerId: string) => {
+    const m = matches.find((x) => x.id === matchId);
+    const p = getPlayer(playerId);
+    if (m && p) m[slot] = p;
+  };
+
+  if (playerCount === 8) {
+    setSlot("10de-8-m1", "player1", entryPlayerIds[0]);
+    setSlot("10de-8-m1", "player2", entryPlayerIds[1]);
+    setSlot("10de-8-m2", "player1", entryPlayerIds[2]);
+    setSlot("10de-8-m2", "player2", entryPlayerIds[3]);
+    setSlot("10de-8-m3", "player1", entryPlayerIds[4]);
+    setSlot("10de-8-m3", "player2", entryPlayerIds[5]);
+    setSlot("10de-8-m4", "player1", entryPlayerIds[6]);
+    setSlot("10de-8-m4", "player2", entryPlayerIds[7]);
+  } else if (playerCount === 9) {
+    setSlot("10de-9-q1", "player1", entryPlayerIds[0]);
+    setSlot("10de-9-q1", "player2", entryPlayerIds[1]);
+    setSlot("10de-9-m1", "player1", entryPlayerIds[2]);
+    setSlot("10de-9-m1", "player2", entryPlayerIds[3]);
+    setSlot("10de-9-m2", "player1", entryPlayerIds[4]);
+    setSlot("10de-9-m2", "player2", entryPlayerIds[5]);
+    setSlot("10de-9-m3", "player1", entryPlayerIds[6]);
+    setSlot("10de-9-m3", "player2", entryPlayerIds[7]);
+    setSlot("10de-9-m4", "player1", entryPlayerIds[8]);
+    // m4 player2 = bye (filled by q1 winner)
+  } else {
+    setSlot("10de-10-q1", "player1", entryPlayerIds[0]);
+    setSlot("10de-10-q1", "player2", entryPlayerIds[1]);
+    setSlot("10de-10-q2", "player1", entryPlayerIds[2]);
+    setSlot("10de-10-q2", "player2", entryPlayerIds[3]);
+    setSlot("10de-10-m1", "player1", entryPlayerIds[4]);
+    setSlot("10de-10-m1", "player2", entryPlayerIds[5]);
+    setSlot("10de-10-m2", "player1", entryPlayerIds[6]);
+    setSlot("10de-10-m2", "player2", entryPlayerIds[7]);
+    setSlot("10de-10-m3", "player1", entryPlayerIds[8]);
+    setSlot("10de-10-m4", "player1", entryPlayerIds[9]);
+    // m3/m4 player2 = bye (filled by q1/q2 winners)
+  }
+  return matches;
+}
+
 const InvitationalPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -241,7 +419,7 @@ const InvitationalPage = () => {
 
   const activeTab = useMemo((): InvitationalTab => {
     const t = searchParams.get("tab");
-    if (t === "8-double" || t === "8-double-bracket-a" || t === "8-double-bracket-b" || t === "8-double-bracket-c" || t === "8-double-bracket-d" || t === "8-single" || t === "4-double" || t === "4-single" || t === "16-single") return t;
+    if (t === "8-double" || t === "8-double-bracket-a" || t === "8-double-bracket-b" || t === "8-double-bracket-c" || t === "8-double-bracket-d" || t === "10-double" || t === "8-single" || t === "4-double" || t === "4-single" || t === "16-single") return t;
     return DEFAULT_TAB;
   }, [searchParams]);
 
@@ -273,18 +451,28 @@ const InvitationalPage = () => {
   // Tournament winner modal (champion + receipt)
   const [showTournamentWinnerModal, setShowTournamentWinnerModal] = useState(false);
 
-  const getMatchIdsForTab = useCallback((tab: InvitationalTab): readonly string[] => {
+  // 10-double tab: 8/9/10 players determined at Start
+  const [flex10Config, setFlex10Config] = useState<{ started: boolean; playerCount: Flex10PlayerCount | null }>({ started: false, playerCount: null });
+  const [flex10EntrySlots, setFlex10EntrySlots] = useState<(string | null)[]>(Array(10).fill(null));
+
+  const getMatchIdsForTab = useCallback((tab: InvitationalTab, overrideFlexCount?: Flex10PlayerCount | null): readonly string[] => {
     if (tab === "8-double") return MATCH_IDS_8_DE;
     if (tab === "8-double-bracket-a") return MATCH_IDS_8_DE_BA;
     if (tab === "8-double-bracket-b") return BRACKET_B.matchIds;
     if (tab === "8-double-bracket-c") return BRACKET_C.matchIds;
     if (tab === "8-double-bracket-d") return BRACKET_D.matchIds;
+    if (tab === "10-double-bracket-a") return MATCH_IDS_10_DE_BA;
+    if (tab === "10-double") {
+      const count = overrideFlexCount ?? flex10Config.playerCount;
+      if (!flex10Config.started || count === null) return [];
+      return getFlex10MatchIds(count);
+    }
     if (tab === "8-single") return MATCH_IDS_8_SE;
     if (tab === "4-double") return MATCH_IDS_4_DE;
     if (tab === "4-single") return MATCH_IDS_4_SE;
     if (tab === "16-single") return MATCH_IDS_16_SE;
     return [];
-  }, []);
+  }, [flex10Config]);
 
   const getRoundLabel = useCallback((tab: InvitationalTab, id: string): string => {
     if (tab === "8-double") return ROUND_LABEL_8_DE[id] ?? "—";
@@ -292,12 +480,31 @@ const InvitationalPage = () => {
     if (tab === "8-double-bracket-b") return BRACKET_B.roundLabels[id] ?? "—";
     if (tab === "8-double-bracket-c") return BRACKET_C.roundLabels[id] ?? "—";
     if (tab === "8-double-bracket-d") return BRACKET_D.roundLabels[id] ?? "—";
+    if (tab === "10-double-bracket-a") {
+      const num = parseInt(id.replace(/\D/g, ''));
+      if (num <= 8) return "WB R1";
+      if (num <= 12) return "WB R2";
+      if (num <= 16) return "LB R1";
+      if (num <= 20) return "LB R2";
+      if (num <= 22) return "WB R3";
+      if (num <= 24) return "LB R3";
+      if (num <= 26) return "LB R4";
+      if (num === 27) return "WB Final";
+      if (num === 28) return "LB R5";
+      if (num === 29) return "LB Final";
+      if (num === 30) return "Grand Final";
+      if (num === 31) return "Bracket Reset";
+      return "—";
+    }
+    if (tab === "10-double" && flex10Config.playerCount === 8) return ROUND_LABEL_10DE_8[id] ?? "—";
+    if (tab === "10-double" && flex10Config.playerCount === 9) return ROUND_LABEL_10DE_9[id] ?? "—";
+    if (tab === "10-double" && flex10Config.playerCount === 10) return ROUND_LABEL_10DE_10[id] ?? "—";
     if (tab === "8-single") return ROUND_LABEL_8_SE[id] ?? "—";
     if (tab === "4-double") return ROUND_LABEL_4_DE[id] ?? "—";
     if (tab === "4-single") return ROUND_LABEL_4_SE[id] ?? "—";
     if (tab === "16-single") return ROUND_LABEL_16_SE[id] ?? "—";
     return "—";
-  }, []);
+  }, [flex10Config.playerCount]);
 
   const getBracketForTab = useCallback((tab: InvitationalTab, id: string): "winners" | "losers" => {
     if (tab === "8-double") return (MATCH_IDS_8_DE.indexOf(id as (typeof MATCH_IDS_8_DE)[number]) < 7) ? "winners" : "losers";
@@ -305,12 +512,22 @@ const InvitationalPage = () => {
     if (tab === "8-double-bracket-b") return (BRACKET_B.matchIds.indexOf(id) < 7) ? "winners" : "losers";
     if (tab === "8-double-bracket-c") return (BRACKET_C.matchIds.indexOf(id) < 7) ? "winners" : "losers";
     if (tab === "8-double-bracket-d") return (BRACKET_D.matchIds.indexOf(id) < 7) ? "winners" : "losers";
+    if (tab === "10-double-bracket-a") {
+      const num = parseInt(id.replace(/\D/g, ''));
+      if (num >= 13 && num <= 20) return "losers";
+      if (num >= 23 && num <= 26) return "losers";
+      if (num === 28 || num === 29) return "losers";
+      return "winners";
+    }
+    if (tab === "10-double" && flex10Config.playerCount === 8) return (MATCH_IDS_10DE_8.indexOf(id as (typeof MATCH_IDS_10DE_8)[number]) < 7) ? "winners" : "losers";
+    if (tab === "10-double" && flex10Config.playerCount === 9) return (["10de-9-q1", "10de-9-m1", "10de-9-m2", "10de-9-m3", "10de-9-m4", "10de-9-m5", "10de-9-m6", "10de-9-m7"].includes(id)) ? "winners" : "losers";
+    if (tab === "10-double" && flex10Config.playerCount === 10) return (["10de-10-q1", "10de-10-q2", "10de-10-m1", "10de-10-m2", "10de-10-m3", "10de-10-m4", "10de-10-m5", "10de-10-m6", "10de-10-m7"].includes(id)) ? "winners" : "losers";
     if (tab === "8-single") return "winners";
     if (tab === "4-double") return (["4-de-m1", "4-de-m2", "4-de-m3"].includes(id)) ? "winners" : "losers";
     if (tab === "4-single") return "winners";
     if (tab === "16-single") return "winners";
     return "winners";
-  }, []);
+  }, [flex10Config.playerCount]);
 
   const initializeMatches = useCallback(
     async (tab: InvitationalTab) => {
@@ -358,7 +575,18 @@ const InvitationalPage = () => {
         console.log("Loaded players:", playersData.length);
         setPlayers(playersData);
 
-        // Check if matches exist in Firebase
+        // 10-double: load config first so we know player count and started state
+        let flex10Loaded: { started: boolean; playerCount: Flex10PlayerCount | null } = { started: false, playerCount: null };
+        if (activeTab === "10-double") {
+          const configSnap = await getDoc(doc(db, "config", "invitational_10double"));
+          const d = configSnap.data();
+          flex10Loaded = {
+            started: !!d?.started,
+            playerCount: (d?.playerCount === 8 || d?.playerCount === 9 || d?.playerCount === 10) ? d.playerCount : null,
+          };
+          setFlex10Config(flex10Loaded);
+        }
+
         console.log("Checking for existing matches in Firebase...");
         const matchesSnapshot = await getDocs(collection(db, "matches"));
         const raw = matchesSnapshot.docs.map((docSnap) => ({
@@ -366,7 +594,9 @@ const InvitationalPage = () => {
           ...docSnap.data(),
         })) as Match[];
 
-        const ids = getMatchIdsForTab(activeTab);
+        const ids = activeTab === "10-double"
+          ? (flex10Loaded.started && flex10Loaded.playerCount ? getFlex10MatchIds(flex10Loaded.playerCount) : [])
+          : getMatchIdsForTab(activeTab);
         if (ids.length > 0) {
           const normalized: Match[] = ids.map((id, i) => {
             const existing = raw.find((m) => m.id === id);
@@ -838,6 +1068,44 @@ const InvitationalPage = () => {
       await run8DeBracketAdvancement("8de-d", BRACKET_D.adv);
     }
 
+    if (isCompleted && player1 && player2 && activeTab === "10-double" && flex10Config.playerCount) {
+      const advMap = flex10Config.playerCount === 8 ? ADVANCEMENT_10DE_8 : flex10Config.playerCount === 9 ? ADVANCEMENT_10DE_9 : ADVANCEMENT_10DE_10;
+      const adv = advMap[selectedMatch.id];
+      const winnerPlayer = winner === "player1" ? player1! : player2!;
+      const loserPlayer = winner === "player1" ? player2! : player1!;
+      const updatedIds = new Set<string>();
+      if (adv?.winner) {
+        setNextMatchSlot(adv.winner.nextId, adv.winner.slot, winnerPlayer);
+        updatedIds.add(adv.winner.nextId);
+      }
+      if (adv?.loser) {
+        setNextMatchSlot(adv.loser.nextId, adv.loser.slot, loserPlayer);
+        updatedIds.add(adv.loser.nextId);
+      }
+      const prefix = flex10Config.playerCount === 8 ? "10de-8" : flex10Config.playerCount === 9 ? "10de-9" : "10de-10";
+      const gfId = flex10Config.playerCount === 10 ? "10de-10-m16" : `${prefix}-m14`;
+      const resetId = flex10Config.playerCount === 10 ? "10de-10-m17" : `${prefix}-m15`;
+      const lbFinalId = flex10Config.playerCount === 10 ? "10de-10-m15" : `${prefix}-m13`;
+      if (selectedMatch.id === gfId) {
+        const lbFinal = nextMatches.find((m) => m.id === lbFinalId);
+        const lbChampion = lbFinal?.winner && lbFinal.player1 && lbFinal.player2 ? (lbFinal.winner === "player1" ? lbFinal.player1 : lbFinal.player2) : null;
+        if (lbChampion && winnerPlayer.id === lbChampion.id) {
+          const resetIdx = nextMatches.findIndex((m) => m.id === resetId);
+          if (resetIdx !== -1) {
+            const resetMatch = { ...nextMatches[resetIdx], player1: updatedMatch.player1, player2: updatedMatch.player2 };
+            nextMatches = nextMatches.slice(0, resetIdx).concat(resetMatch, nextMatches.slice(resetIdx + 1));
+            try {
+              await updateDoc(doc(db, "matches", resetId), { player1: updatedMatch.player1 ?? null, player2: updatedMatch.player2 ?? null });
+            } catch (e) {
+              if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+              else console.error("Error filling bracket reset:", e);
+            }
+          }
+        }
+      }
+      await persistMatches(updatedIds);
+    }
+
     if (isCompleted && player1 && player2 && activeTab === "8-single") {
       const adv = ADVANCEMENT_8_SE[selectedMatch.id];
       const winnerPlayer = winner === "player1" ? player1 : player2;
@@ -921,10 +1189,45 @@ const InvitationalPage = () => {
     if (champ) setShowTournamentWinnerModal(true);
   };
 
+  const handleStartFlex10Tournament = useCallback(async () => {
+    const entryIds = flex10EntrySlots.filter((id): id is string => id != null && id !== "");
+    const count = entryIds.length;
+    if (count < 8 || count > 10) {
+      alert("Please add between 8 and 10 players to start the tournament.");
+      return;
+    }
+    const playerCount = count as Flex10PlayerCount;
+    setShowResetConfirm(false);
+    try {
+      await setDoc(doc(db, "config", "invitational_10double"), { started: true, playerCount });
+      const seeded = seedFlex10Bracket(playerCount, entryIds, players);
+      const matchesRef = collection(db, "matches");
+      for (const match of seeded) {
+        await setDoc(doc(matchesRef, match.id), match);
+      }
+      setFlex10Config({ started: true, playerCount });
+      setMatches(seeded);
+    } catch (e) {
+      if ((e as { code?: string })?.code === "permission-denied") showLimitReachedModal();
+      else console.error("Start tournament:", e);
+    }
+  }, [flex10EntrySlots, players, showLimitReachedModal]);
+
   const handleResetTournament = async () => {
     if (!canEdit) return;
     setShowResetConfirm(false);
     setShowTournamentWinnerModal(false);
+    if (activeTab === "10-double") {
+      try {
+        await setDoc(doc(db, "config", "invitational_10double"), { started: false, playerCount: null });
+      } catch (e) {
+        console.error("Reset 10-double config:", e);
+      }
+      setFlex10Config({ started: false, playerCount: null });
+      setFlex10EntrySlots(Array(10).fill(null));
+      setMatches([]);
+      return;
+    }
     await initializeMatches(activeTab);
   };
 
@@ -958,6 +1261,17 @@ const InvitationalPage = () => {
         const m14Winner = m14.winner === "player1" ? m14.player1 : m14.player2;
         if (lbChampion && m14Winner.id === lbChampion.id) return null;
         return m14Winner;
+      }
+      return null;
+    }
+    if (tab === "10-double-bracket-a") {
+      const m30 = matchList.find((m) => m.id === "10de-a-30");
+      const m31 = matchList.find((m) => m.id === "10de-a-31");
+      if (m31?.status === "completed" && m31.winner && m31.player1 && m31.player2)
+        return m31.winner === "player1" ? m31.player1 : m31.player2;
+      if (m30?.status === "completed" && m30.winner && m30.player1 && m30.player2) {
+        if (m30.winner === "player1") return m30.player1;
+        return null;
       }
       return null;
     }
@@ -1012,8 +1326,29 @@ const InvitationalPage = () => {
         return m15.winner === "player1" ? m15.player1 : m15.player2;
       return null;
     }
+    if (tab === "10-double" && flex10Config.playerCount) {
+      const champForFlex = (gfId: string, resetId: string, lbFinalId: string) => {
+        const gf = matchList.find((m) => m.id === resetId);
+        const grandFinal = matchList.find((m) => m.id === gfId);
+        if (gf?.status === "completed" && gf.winner && gf.player1 && gf.player2)
+          return gf.winner === "player1" ? gf.player1 : gf.player2;
+        if (grandFinal?.status === "completed" && grandFinal.winner && grandFinal.player1 && grandFinal.player2) {
+          const lbFinal = matchList.find((m) => m.id === lbFinalId);
+          const lbChamp = lbFinal?.winner && lbFinal.player1 && lbFinal.player2
+            ? (lbFinal.winner === "player1" ? lbFinal.player1 : lbFinal.player2)
+            : null;
+          const gfWinner = grandFinal.winner === "player1" ? grandFinal.player1 : grandFinal.player2;
+          if (lbChamp && gfWinner.id === lbChamp.id) return null;
+          return gfWinner;
+        }
+        return null;
+      };
+      if (flex10Config.playerCount === 8) return champForFlex("10de-8-m14", "10de-8-m15", "10de-8-m13");
+      if (flex10Config.playerCount === 9) return champForFlex("10de-9-m14", "10de-9-m15", "10de-9-m13");
+      return champForFlex("10de-10-m16", "10de-10-m17", "10de-10-m15");
+    }
     return null;
-  }, []);
+  }, [flex10Config.playerCount]);
 
   const tournamentChampion = getTournamentChampion(matches, activeTab);
 
@@ -1040,6 +1375,12 @@ const InvitationalPage = () => {
       ? "8D- Bracket C (Double Elimination)"
       : activeTab === "8-double-bracket-d"
       ? "8D- Bracket D (Double Elimination)"
+      : activeTab === "10-double-bracket-a"
+      ? "10P- Bracket A (Double Elimination)"
+      : activeTab === "10-double"
+      ? (flex10Config.started && flex10Config.playerCount
+          ? `${flex10Config.playerCount}-Player Double Elimination`
+          : "8–10 Players Double Elimination (add 8–10 players, then Start)")
       : activeTab === "8-single"
       ? "8-Player Single Elimination"
       : activeTab === "4-double"
@@ -1223,6 +1564,316 @@ const InvitationalPage = () => {
             </div>
           </div>
         </div>
+        )}
+
+        {/* 10-double: Initial entry (8–10 players) then Start */}
+        {activeTab === "10-double" && !flex10Config.started && (
+          <div className="rounded-lg border border-slate-600 bg-slate-800/50 p-6 max-w-2xl">
+            <h2 className="text-lg font-bold text-slate-100 mb-2">Initial entry</h2>
+            <p className="text-sm text-slate-300 mb-4">Add 8, 9, or 10 players. Order determines bracket placement. Then click Start tournament.</p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {Array.from({ length: 10 }, (_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-slate-400 w-6 text-sm">{i + 1}.</span>
+                  <select
+                    className="flex-1 border border-slate-600 rounded-md px-2 py-1.5 text-slate-100 bg-slate-800 text-sm"
+                    value={flex10EntrySlots[i] ?? ""}
+                    onChange={(e) => {
+                      const next = [...flex10EntrySlots];
+                      next[i] = e.target.value || null;
+                      setFlex10EntrySlots(next);
+                    }}
+                  >
+                    <option value="">— Select —</option>
+                    {players
+                      .filter((p) => !flex10EntrySlots.some((id, j) => j !== i && id === p.id))
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={handleStartFlex10Tournament}
+              className="rounded-md bg-amber-500 px-4 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-400"
+            >
+              Start tournament
+            </button>
+          </div>
+        )}
+
+        {/* 10-double: 8-player bracket (no qualy) */}
+        {activeTab === "10-double" && flex10Config.started && flex10Config.playerCount === 8 && (
+          <div className="flex flex-col space-y-2">
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
+                <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-8-m1", "10de-8-m2", "10de-8-m3", "10de-8-m4"].map((id) => renderMatchBox(id, false))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
+                    <div className="flex flex-col space-y-16 items-center justify-center flex-1">
+                      {["10de-8-m5", "10de-8-m6"].map((id) => renderMatchBox(id, false))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-8-m7", false)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
+                <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-8-m8", "10de-8-m9"].map((id) => renderMatchBox(id, true))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-8-m10", "10de-8-m11"].map((id) => renderMatchBox(id, true))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-8-m12", true)}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-8-m13", true)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
+                <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
+              </div>
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("10de-8-m14", false)}
+                {renderMatchBox("10de-8-m15", false)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 10-double: 9-player bracket (1 qualy) */}
+        {activeTab === "10-double" && flex10Config.started && flex10Config.playerCount === 9 && (
+          <div className="flex flex-col space-y-2">
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-emerald-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Qualy</div>
+                <h2 className="text-lg font-bold text-slate-100">Qualifying</h2>
+              </div>
+              <div className="flex space-x-4 pb-2">
+                {renderMatchBox("10de-9-q1", false)}
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
+                <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-9-m1", "10de-9-m2", "10de-9-m3", "10de-9-m4"].map((id) => renderMatchBox(id, false))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
+                    <div className="flex flex-col space-y-16 items-center justify-center flex-1">
+                      {["10de-9-m5", "10de-9-m6"].map((id) => renderMatchBox(id, false))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-9-m7", false)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
+                <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-9-m8", "10de-9-m9"].map((id) => renderMatchBox(id, true))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-9-m10", "10de-9-m11"].map((id) => renderMatchBox(id, true))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-9-m12", true)}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-9-m13", true)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
+                <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
+              </div>
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("10de-9-m14", false)}
+                {renderMatchBox("10de-9-m15", false)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 10-double: 10-player bracket (2 qualy) */}
+        {activeTab === "10-double" && flex10Config.started && flex10Config.playerCount === 10 && (
+          <div className="flex flex-col space-y-2">
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-emerald-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Qualy</div>
+                <h2 className="text-lg font-bold text-slate-100">Qualifying</h2>
+              </div>
+              <div className="flex space-x-4 pb-2">
+                {renderMatchBox("10de-10-q1", false)}
+                {renderMatchBox("10de-10-q2", false)}
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-blue-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">WB</div>
+                <h2 className="text-lg font-bold text-slate-100">Winners Bracket</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="flex space-x-12 min-w-max pb-2 items-center min-h-[300px]">
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R1</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-10-m1", "10de-10-m2", "10de-10-m3", "10de-10-m4"].map((id) => renderMatchBox(id, false))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB R2</div>
+                    <div className="flex flex-col space-y-16 items-center justify-center flex-1">
+                      {["10de-10-m5", "10de-10-m6"].map((id) => renderMatchBox(id, false))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[250px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">WB Final</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-10-m7", false)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-red-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">LB</div>
+                <h2 className="text-lg font-bold text-slate-100">Losers Bracket</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <div className="flex space-x-4 min-w-max pb-2 items-center min-h-[210px]">
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R1</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-10-m8", "10de-10-m9"].map((id) => renderMatchBox(id, true))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R2</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-10-m10", "10de-10-m11"].map((id) => renderMatchBox(id, true))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R3</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {["10de-10-m12", "10de-10-m13"].map((id) => renderMatchBox(id, true))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB R4</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-10-m14", true)}
+                    </div>
+                  </div>
+                  <div className="flex flex-col min-h-[175px]">
+                    <div className="text-center font-bold text-sm text-slate-200 mb-2">LB Final</div>
+                    <div className="flex flex-col space-y-1 items-center justify-center flex-1">
+                      {renderMatchBox("10de-10-m15", true)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t-2 border-gray-300 my-2" />
+            <div className="w-full">
+              <div className="flex items-center mb-2">
+                <div className="bg-amber-600 text-white px-2 py-1 rounded-lg font-bold mr-2 text-sm">Finals</div>
+                <h2 className="text-lg font-bold text-slate-100">Grand Final &amp; Bracket Reset</h2>
+              </div>
+              <div className="flex space-x-4 min-w-max pb-2 items-center">
+                {renderMatchBox("10de-10-m16", false)}
+                {renderMatchBox("10de-10-m17", false)}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* 10-Player Bracket A */}
+        {activeTab === "10-double-bracket-a" && (
+          <TenPlayerBracketA players={players} canEdit={canEdit} />
         )}
 
         {/* 8D- Bracket A: same UI as 8 Double, own data; no Tour Manager sync */}
@@ -1763,6 +2414,12 @@ const InvitationalPage = () => {
                     ? ["8de-c-m1", "8de-c-m2", "8de-c-m3", "8de-c-m4"]
                     : activeTab === "8-double-bracket-d"
                     ? ["8de-d-m1", "8de-d-m2", "8de-d-m3", "8de-d-m4"]
+                    : activeTab === "10-double" && flex10Config.playerCount === 8
+                    ? ["10de-8-m1", "10de-8-m2", "10de-8-m3", "10de-8-m4"]
+                    : activeTab === "10-double" && flex10Config.playerCount === 9
+                    ? ["10de-9-q1", "10de-9-m1", "10de-9-m2", "10de-9-m3", "10de-9-m4"]
+                    : activeTab === "10-double" && flex10Config.playerCount === 10
+                    ? ["10de-10-q1", "10de-10-q2", "10de-10-m1", "10de-10-m2", "10de-10-m3", "10de-10-m4"]
                     : activeTab === "8-single"
                     ? ["8-se-m1", "8-se-m2", "8-se-m3", "8-se-m4"]
                     : activeTab === "4-double"
@@ -1776,9 +2433,22 @@ const InvitationalPage = () => {
                 const name1 = players.find((p) => p.id === selectedPlayer1)?.name ?? "Player 1";
                 const name2 = players.find((p) => p.id === selectedPlayer2)?.name ?? "Player 2";
                 const searchLower = playerSearch.trim().toLowerCase();
-                const filteredPlayers = searchLower
+
+                // Prevent duplicate players within the same format's first-round matches
+                const firstRoundUsedIds = new Set<string>();
+                if (firstRoundIds.length > 0 && selectedMatch) {
+                  for (const m of matches) {
+                    if (!firstRoundIds.includes(m.id)) continue;
+                    if (m.id === selectedMatch.id) continue;
+                    if (m.player1?.id) firstRoundUsedIds.add(m.player1.id);
+                    if (m.player2?.id) firstRoundUsedIds.add(m.player2.id);
+                  }
+                }
+
+                const filteredPlayers = (searchLower
                   ? players.filter((p) => p.name.toLowerCase().includes(searchLower))
-                  : players;
+                  : players
+                ).filter((p) => !firstRoundUsedIds.has(p.id));
                 if (isFirstRound) {
                   return (
                     <>
