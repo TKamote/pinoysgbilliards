@@ -63,7 +63,9 @@ export default function LayoutWithNav({
     (pathname === "/3-players" && threePlayersIsLive) ||
     (pathname === "/tour-manager" && tourManagerIsLive) ||
     (pathname === "/pbs-cup-8" && pbsCup8IsLive) ||
-    (pathname === "/pbs-cup-2" && pbsCup2IsLive);
+    (pathname === "/pbs-cup-2" && pbsCup2IsLive) ||
+    (pathname === "/pbs-cup-2-8-single-overlay" && pbsCup2IsLive) ||
+    (pathname === "/pbs-cup-teams" && pbsCup2IsLive);
   if (thisPageLive) {
     return (
       <>

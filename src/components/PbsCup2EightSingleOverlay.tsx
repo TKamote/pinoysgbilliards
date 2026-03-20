@@ -62,6 +62,7 @@ const FIRST_ROUND_IDS = ["pbs2-8se-m1", "pbs2-8se-m2", "pbs2-8se-m3", "pbs2-8se-
 interface Props {
   players: Player[];
   canEdit: boolean;
+  variant?: "full" | "overlayOnly";
 }
 
 function defaultMatch(id: string, index: number): Match {
@@ -77,7 +78,7 @@ function defaultMatch(id: string, index: number): Match {
   };
 }
 
-export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
+export default function PbsCup2EightSingleOverlay({ players, canEdit, variant = "full" }: Props) {
   // Breaker UI: allow the same player-selection modal UI used in R1
   // to be shown for Semis and Final as well.
   const isBreaker8SingleUI = true;
@@ -331,7 +332,14 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
 
   return (
     <>
-      <div className="w-full md:w-[75%] mx-auto mt-1 md:mt-2 rounded-lg border border-transparent bg-black/60 p-4">
+      <div className={variant === "overlayOnly" ? "min-h-[90vh] w-full bg-black/60 flex items-center justify-center px-2 py-4" : "contents"}>
+        <div
+          className={
+            variant === "overlayOnly"
+              ? "w-full md:w-[75%] mx-auto rounded-lg border border-transparent bg-transparent p-4"
+              : "w-full md:w-[75%] mx-auto mt-1 md:mt-2 rounded-lg border border-transparent bg-black/60 p-4"
+          }
+        >
         <div className="flex items-center justify-center mb-3">
           <h2 className="text-[39px] font-bold text-white">PBS Cup March 2026</h2>
         </div>
@@ -366,6 +374,7 @@ export default function PbsCup2EightSingleOverlay({ players, canEdit }: Props) {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
