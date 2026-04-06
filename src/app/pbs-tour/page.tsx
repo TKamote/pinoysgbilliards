@@ -622,150 +622,8 @@ const PbsTourPage = () => {
   const canSelectPlayers = isManager && !pbsTourIsLive;
 
   return (
-    <div className="p-2 sm:p-4 md:p-6 min-h-screen md:h-screen flex flex-col bg-transparent overflow-y-auto md:overflow-hidden">
+    <div className="p-2 sm:p-4 md:p-6 h-screen flex flex-col bg-transparent overflow-hidden">
       <div className="mx-auto flex-1 flex flex-col relative w-full" style={{ maxWidth: "1920px" }}>
-        {/* Mobile layout — screens below md only; desktop overlay unchanged below */}
-        <div className="md:hidden flex flex-col gap-3 w-full pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => canSelectPlayers && setShowLogo1Modal(true)}
-              className={`shrink-0 rounded-full overflow-hidden border-2 border-white bg-white shadow w-14 h-14 flex items-center justify-center ${canSelectPlayers ? "cursor-pointer active:opacity-90" : "cursor-default"}`}
-              title={canSelectPlayers ? "Pick logo" : ""}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logo1URL || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPbsTourIsLive(!pbsTourIsLive)}
-              className={`text-white px-4 py-2 rounded-full font-bold text-sm shrink-0 ${
-                pbsTourIsLive
-                  ? "bg-linear-to-r from-red-600 to-red-800 animate-pulse"
-                  : "bg-gray-500 active:bg-gray-600"
-              }`}
-            >
-              {pbsTourIsLive ? "LIVE" : "GO LIVE"}
-            </button>
-          </div>
-          <div className="flex justify-center">
-            {showRaceToInput && isManager ? (
-              <input
-                type="number"
-                value={tempRaceTo}
-                onChange={(e) => setTempRaceTo(e.target.value)}
-                onBlur={handleRaceToChange}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleRaceToChange();
-                  else if (e.key === "Escape") {
-                    setShowRaceToInput(false);
-                    setTempRaceTo(raceTo.toString());
-                  }
-                }}
-                className="w-16 text-center text-base font-bold text-gray-900 border-2 border-indigo-600 rounded-lg px-2 py-1"
-                min={1}
-                max={50}
-                autoFocus
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (isManager) {
-                    setShowRaceToInput(true);
-                    setTempRaceTo(raceTo.toString());
-                  }
-                }}
-                className={`text-base font-bold text-gray-900 ${isManager ? "underline" : ""}`}
-                disabled={!isManager}
-              >
-                Race {raceTo}
-              </button>
-            )}
-          </div>
-          {/* Player 1 */}
-          <div className="bg-indigo-900 rounded-xl p-3 flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={() => canSelectPlayers && setShowPlayer1Modal(true)}
-              className={`w-16 h-16 shrink-0 rounded-full overflow-hidden border-2 border-white ${canSelectPlayers ? "" : "cursor-default"} ${getPlayer1Photo() ? "bg-transparent" : "bg-indigo-800"}`}
-            >
-              {getPlayer1Photo() ? (
-                <Image src={getPlayer1Photo()!} alt="" width={64} height={64} className="w-full h-full object-cover" unoptimized />
-              ) : (
-                <Image src={getPlayer1Placeholder()} alt="" width={64} height={64} className="w-full h-full object-cover" />
-              )}
-            </button>
-            <div className="flex-1 min-w-0">
-              <button
-                type="button"
-                onClick={() => canSelectPlayers && setShowPlayer1Modal(true)}
-                className={`text-left w-full ${canSelectPlayers ? "" : "cursor-default"}`}
-              >
-                <span className="text-sm font-semibold text-white leading-snug line-clamp-2">{getPlayer1Name()}</span>
-              </button>
-              <div className="flex items-center gap-2 mt-1">
-                <button type="button" className="text-xs text-white/80 px-2 py-0.5 border border-white/40 rounded" onClick={() => setPlayer1Score((s) => Math.max(0, s - 1))} aria-label="P1 minus">−</button>
-                <span className="text-xl font-bold text-white tabular-nums">{player1Score}</span>
-                <button type="button" className="text-xs text-white/80 px-2 py-0.5 border border-white/40 rounded" onClick={() => setPlayer1Score((s) => s + 1)} aria-label="P1 plus">+</button>
-              </div>
-            </div>
-            <div className={`text-3xl font-bold text-white w-8 flex justify-center shrink-0 ${currentTurn === "player1" ? "opacity-100" : "opacity-20"}`} aria-hidden>‹</div>
-          </div>
-          {/* Player 2 */}
-          <div className="bg-indigo-800 rounded-xl p-3 flex items-center gap-3 min-w-0">
-            <div className={`text-3xl font-bold text-white w-8 flex justify-center shrink-0 ${currentTurn === "player2" ? "opacity-100" : "opacity-20"}`} aria-hidden>›</div>
-            <div className="flex-1 min-w-0 flex flex-col items-end text-right">
-              <button
-                type="button"
-                onClick={() => canSelectPlayers && setShowPlayer2Modal(true)}
-                className={`text-right w-full ${canSelectPlayers ? "" : "cursor-default"}`}
-              >
-                <span className="text-sm font-semibold text-white leading-snug line-clamp-2">{getPlayer2Name()}</span>
-              </button>
-              <div className="flex items-center gap-2 mt-1 justify-end">
-                <button type="button" className="text-xs text-white/80 px-2 py-0.5 border border-white/40 rounded" onClick={() => setPlayer2Score((s) => Math.max(0, s - 1))} aria-label="P2 minus">−</button>
-                <span className="text-xl font-bold text-white tabular-nums">{player2Score}</span>
-                <button type="button" className="text-xs text-white/80 px-2 py-0.5 border border-white/40 rounded" onClick={() => setPlayer2Score((s) => s + 1)} aria-label="P2 plus">+</button>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => canSelectPlayers && setShowPlayer2Modal(true)}
-              className={`w-16 h-16 shrink-0 rounded-full overflow-hidden border-2 border-white ${canSelectPlayers ? "" : "cursor-default"} ${getPlayer2Photo() ? "bg-transparent" : "bg-indigo-700"}`}
-            >
-              {getPlayer2Photo() ? (
-                <Image src={getPlayer2Photo()!} alt="" width={64} height={64} className="w-full h-full object-cover" unoptimized />
-              ) : (
-                <Image src={getPlayer2Placeholder()} alt="" width={64} height={64} className="w-full h-full object-cover" />
-              )}
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 bg-amber-50 rounded-2xl px-3 py-3">
-            {ballNumbers.length > 0 ? (
-              ballNumbers.map((ballNum) => {
-                const isPocketed = pocketedBalls.has(ballNum);
-                return (
-                  <button
-                    key={ballNum}
-                    type="button"
-                    onClick={() => handleBallClick(ballNum)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${isPocketed ? "opacity-25" : "opacity-100 active:scale-95"}`}
-                  >
-                    <Image src={`/ballicons/ball-${ballNum}.png`} alt={`Ball ${ballNum}`} width={40} height={40} className="object-contain w-full h-full" unoptimized />
-                  </button>
-                );
-              })
-            ) : (
-              <span className="text-sm text-gray-600">No balls for {pbsTourGameMode || "current"} mode</span>
-            )}
-            <button type="button" onClick={handleResetBalls} className="text-gray-500 p-2" title="Reset balls" aria-label="Reset balls">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="hidden md:flex md:flex-1 md:flex-col md:min-h-0 relative w-full">
         {/* Live Button - Top Right Corner */}
         <div className="absolute top-2 right-2 sm:top-4 sm:right-4 md:top-20 md:right-12 z-10">
           <button
@@ -787,6 +645,7 @@ const PbsTourPage = () => {
             <img src={logo1URL || DEFAULT_LOGO} alt="Logo" className="w-full h-full object-contain" />
           </div>
         </button>
+        <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }} title="Select Logo" />
 
         {/* Players Scoring Container - Bottom - 60% width on desktop for YouTube Shorts margin; overflow-visible for enlarged photo experiment */}
         <div className="mt-auto w-full md:w-[60%] max-w-full mx-auto flex items-center justify-center px-2 sm:px-4 md:px-0 overflow-visible">
@@ -1042,9 +901,6 @@ const PbsTourPage = () => {
             </button>
           </div>
         </div>
-        </div>
-
-        <LogoSelectionModal isOpen={showLogo1Modal} onClose={() => setShowLogo1Modal(false)} logos={logos} selectedLogoURL={logo1URL || null} onSelect={(logo) => { handleSelectLogo(logo); setShowLogo1Modal(false); }} title="Select Logo" />
 
         {/* Player Selection Modals */}
         <PlayerSelectionModal

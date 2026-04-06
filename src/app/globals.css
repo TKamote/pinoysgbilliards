@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Explicit scan so Tailwind v4 picks up all class names in src (avoids “no styles” builds) */
+@source "../**/*.{js,ts,jsx,tsx}";
 
 :root {
   --background: #ffffff;
