@@ -810,7 +810,7 @@ const LiveMatchPage = () => {
           {/* Race To */}
           <div className="bg-gray-800 bg-opacity-80 px-4 py-2 text-white flex items-center space-x-2" style={{ minWidth: "140px" }}>
             <div className="text-lg sm:text-xl font-bold text-gray-300">Race to</div>
-            <div className="text-lg sm:text-xl font-bold">5</div>
+            <div className="text-lg sm:text-xl font-bold">3</div>
           </div>
 
           {/* Team 1 */}
